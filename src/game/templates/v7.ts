@@ -1,0 +1,137 @@
+import { canonicalizeMap } from "../contracts/canonical";
+import type { MapObject } from "../contracts/schemas";
+import type { Template } from "./v1";
+export type { Template } from "./v1";
+
+type Edge = { y: number; left: number; right: number };
+function neonCourse(variant: number) {
+  const objects: MapObject[] = [];
+  const base = (x: number, y: number, rotation = 0, color = "#E8FFFF") => ({
+    id: `${String(19 + variant).padStart(8, "0")}-0000-4000-8000-${String(objects.length + 1).padStart(12, "0")}`,
+    transform: { x, y, rotation }, color,
+  });
+  const wall = (x: number, y: number, width: number, height: number, rotation = 0) =>
+    objects.push({ ...base(x, y, rotation), kind: "wall", width, height });
+  const rail = (x1: number, y1: number, x2: number, y2: number) =>
+    wall((x1 + x2) / 2, (y1 + y2) / 2, Math.hypot(x2 - x1, y2 - y1), 0.32, Math.atan2(y2 - y1, x2 - x1));
+  const bumper = (x: number, y: number, radius = 0.42, color = "#66F1EB") =>
+    objects.push({ ...base(x, y, 0, color), kind: "bumper", radius, strength: "strong" });
+  const rotor = (x: number, y: number, width: number, speed: number, angle = 0, color = "#66F1EB") =>
+    objects.push({ ...base(x, y, angle, color), kind: "rotor", width, height: 0.22, angularVelocity: speed });
+  // Original broad, connected corridors: each course has a different silhouette.
+  const paths: Edge[][] = [
+    [{y:0.3,left:0.5,right:23.5},{y:6,left:0.5,right:23.5},{y:14,left:4,right:20},{y:26,left:4,right:20},{y:34,left:1,right:17},{y:46,left:1,right:17},{y:54,left:7,right:23},{y:66,left:7,right:23},{y:74,left:3,right:21},{y:84,left:3,right:21}],
+    [{y:0.3,left:0.5,right:23.5},{y:6,left:0.5,right:23.5},{y:14,left:2,right:22},{y:26,left:2,right:22},{y:34,left:5,right:19},{y:46,left:5,right:19},{y:54,left:1,right:23},{y:66,left:1,right:23},{y:74,left:4,right:20},{y:84,left:4,right:20}],
+    [{y:0.3,left:0.5,right:23.5},{y:6,left:0.5,right:23.5},{y:14,left:1,right:17},{y:26,left:1,right:17},{y:34,left:7,right:23},{y:46,left:7,right:23},{y:54,left:2,right:18},{y:66,left:2,right:18},{y:74,left:4,right:20},{y:84,left:4,right:20}],
+  ];
+  const path = paths[variant]!;
+  const mouth = variant === 2 ? 10.5 : 12;
+  // A short narrow neck gathers the field before opening back into stage one.
+  // Spawn remains full width; the neck begins below every starting slot.
+  const edges = [path[0]!, path[1]!,
+    {y:10.8,left:mouth - 3.4,right:mouth + 3.4},
+    {y:12.6,left:mouth - 3.4,right:mouth + 3.4},
+    ...path.slice(2), {y:92,left:10.04,right:13.96}, {y:95.35,left:10.04,right:13.96}];
+  for (let i = 1; i < edges.length; i++) {
+    const a = edges[i - 1]!, b = edges[i]!;
+    rail(a.left, a.y, b.left, b.y);
+    rail(a.right, a.y, b.right, b.y);
+  }
+  wall(12, 0.25, 23, 0.5);
+  wall(12, 95.75, 23, 0.5);
+  // Active kickers above, inside and below the throat; no spanning gate.
+  for (const x of [3, 6.5, 10, 13.5, 17, 20.5]) bumper(x, 5.8, 0.32, "#FFD45E");
+  if (variant === 0) {
+    rotor(mouth - 3, 8, 2.4, 2.8, 0.5, "#FF687B");
+    rotor(mouth + 3, 8, 2.4, -2.8, -0.5, "#FF687B");
+    for (const x of [mouth - 0.8, mouth + 0.8]) bumper(x, 8.6, 0.3, "#FFD45E");
+  } else if (variant === 1) {
+    for (const offset of [-5, -2.5, 0, 2.5, 5]) bumper(mouth + offset, 7.2, 0.4, "#FC78C7");
+    for (const offset of [-3.75, -1.25, 1.25, 3.75]) bumper(mouth + offset, 8.8, 0.35, "#FFD45E");
+  } else {
+    for (const [index, offset] of [-3, 0, 3].entries())
+      rotor(mouth + offset, 7.7, 1.8, index % 2 ? 2.9 : -2.9, index * 0.7, "#A78BFA");
+    for (const offset of [-3, 0, 3]) bumper(mouth + offset, 9.1, 0.26, "#FC78C7");
+  }
+  for (const offset of [-1.3, 1.3]) bumper(mouth + offset, 9.6, 0.3);
+  for (const offset of [-2.85, 2.85]) bumper(mouth + offset, 9.9, 0.28, "#FF687B");
+  // Even at full horizontal extension the rotors leave a central passage.
+  // Each outside passage also exceeds the 0.44 marble diameter.
+  rotor(mouth - 1.95, 11.7, 1.4, 2.7, 0.4, "#FF687B");
+  rotor(mouth + 1.95, 11.7, 1.4, -2.7, -0.4, "#66F1EB");
+  for (const offset of [-2.65, -0.95, 0.95, 2.65])
+    bumper(mouth + offset, 13.35, 0.28, "#FFD45E");
+  bumper(mouth, 14.5, 0.38, "#FC78C7");
+  // Keep the later connecting bends active, with broad gaps between kickers.
+  for (const y of [29, 31.5, 49, 51.5, 69, 71.5]) {
+    const next = edges.findIndex((edge) => edge.y >= y);
+    const a = edges[next - 1]!, b = edges[next]!;
+    const t = (y - a.y) / (b.y - a.y);
+    const left = a.left + (b.left - a.left) * t + 2;
+    const right = a.right + (b.right - a.right) * t - 2;
+    for (let col = 0; col < 7; col++) bumper(left + (right - left) * col / 6, y, 0.28);
+  }
+  const patterns = [["sweep","pins","diamonds"],["pins","diamonds","sweep"],["diamonds","sweep","pins"]] as const;
+  patterns[variant]!.forEach((pattern, stage) => {
+    const edge = path[2 + stage * 2]!;
+    const center = (edge.left + edge.right) / 2;
+    const inner = edge.right - edge.left - 5;
+    const xAt = (fraction: number) => center + (fraction - 0.5) * inner;
+    const y = 16 + stage * 20;
+    if (pattern === "sweep") {
+      for (const row of [0, 6]) {
+        rotor(xAt(0.2), y + row, 3.6, 1.5 + variant * 0.15, 0.5);
+        rotor(xAt(0.8), y + row, 3.6, -1.5 - variant * 0.15, -0.5);
+      }
+      for (let col = 0; col < 5; col++) bumper(xAt(col / 4), y + 3, 0.34);
+    } else if (pattern === "pins") {
+      for (let row = 0; row < 4; row++)
+        for (let col = 0; col < 5; col++)
+          bumper(xAt((col + (row % 2 ? 0.35 : 0)) / 4.35), y + row * 2.4, 0.4, "#FFD45E");
+    } else {
+      for (const row of [0, 5])
+        for (let col = 0; col < 3; col++) {
+          const x = xAt(col / 2);
+          bumper(x, y + row, 0.36, "#FC78C7");
+          bumper(x - 0.8, y + row + 1.4, 0.3, "#FC78C7");
+          bumper(x + 0.8, y + row + 1.4, 0.3, "#FC78C7");
+        }
+    }
+  });
+  const final = path[8]!;
+  const mid = (final.left + final.right) / 2;
+  if (variant === 0) {
+    for (const x of [mid - 4, mid, mid + 4]) rotor(x, 77, 2.6, x === mid ? -2 : 2);
+    for (let col = 0; col < 5; col++) bumper(mid - 5 + col * 2.5, 81, 0.42);
+  } else if (variant === 1) {
+    for (let row = 0; row < 3; row++)
+      for (let col = 0; col < 4; col++) bumper(mid - 4.5 + col * 3 + (row % 2 ? 0.5 : 0), 75 + row * 2.8, 0.46, "#FFD45E");
+    rotor(mid, 83, 3, 1.8);
+  } else {
+    rotor(mid - 3.5, 76, 3.4, 1.8);
+    rotor(mid + 3.5, 76, 3.4, -1.8);
+    rotor(mid, 82, 3.4, -2);
+    for (const x of [mid - 4, mid, mid + 4]) bumper(x, 79.2, 0.4);
+  }
+  // Active obstacles before the neck, with an open 3.6-unit exit after them.
+  bumper(10, 87, 0.4);
+  bumper(14, 87, 0.4);
+  for (const x of [8.5, 10.8, 13.2, 15.5]) bumper(x, 85.6, 0.28, "#FFD45E");
+  rotor(10.15, 88.8, 1.4, 2.6, 0.5, "#FF687B");
+  rotor(13.85, 88.8, 1.4, -2.6, -0.5, "#66F1EB");
+  bumper(11, 90.8, 0.3);
+  bumper(13, 90.8, 0.3);
+  bumper(12, 92, 0.22, "#FFD45E");
+  return canonicalizeMap({
+    schemaVersion: 1, physicsProfile: "arcade-flow-v1",
+    world: {width:24,height:96}, theme:"night",
+    spawn:{x:1.78,y:1.28,width:20.39,height:3.64},
+    finish:{left:10.2,right:13.8,y:94}, objects,
+  },100);
+}
+const stages = (titles: readonly string[]) => titles.map((title, index) => ({y:12 + index * 20,title}));
+export const TEMPLATES: readonly Template[] = [
+  {id:"silk-zigzag-v7",title:"네온 드리프트",subtitle:"NEON DRIFT",description:"좁은 입구의 교차 스위퍼 · 연속 킥과 결승 앞 역회전",difficulty:"보통",supportedParticipants:{min:2,max:100},stages:stages(["회전 스위퍼","팝핀 낙하","다이아몬드 킥","삼중 회전 결승"]),map:neonCourse(0)},
+  {id:"bloom-bumper-v7",title:"버블 캐스케이드",subtitle:"BUBBLE CASCADE",description:"버블 샤워가 모이는 좁은 입구 · 결승 직전까지 연속 킥",difficulty:"도전",supportedParticipants:{min:2,max:100},stages:stages(["버블 챔버","다이아몬드 킥","회전 스위퍼","마지막 팝핀"]),map:neonCourse(1)},
+  {id:"orbit-rotor-v7",title:"오비트 러시",subtitle:"ORBIT RUSH",description:"엇갈린 좁은 목과 역회전 터빈 · 마지막 이중 회전 결승",difficulty:"도전",supportedParticipants:{min:2,max:100},stages:stages(["다이아몬드 킥","반전 터빈","팝핀 낙하","더블 오비트"]),map:neonCourse(2)},
+];
