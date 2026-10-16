@@ -1,7 +1,10 @@
 import { Application, Container, Graphics, Sprite, Text } from "pixi.js";
 import { PROFILE, type AirBurst, type Pose, type Scene } from "../core/types";
 
-import { cameraFrame, cameraFromTransform, startCameraFrame, type ViewMode } from "./camera";
+import {
+  CAMERA_ZOOM, cameraFrame, cameraFromTransform, overviewCameraFrame, startCameraFrame,
+  type CameraBounds, type CameraPoint, type ViewMode,
+} from "./camera";
 import { CourseMinimap } from "./CourseMinimap";
 import { MarbleArt } from "./MarbleArt";
 import { FinishAirEffects } from "./FinishAirEffects";
@@ -46,6 +49,9 @@ export class PixiRenderer {
   private frontY = 0;
   private frontX = 12;
   private zoom = 1;
+  private overviewZoom = 1;
+  private overviewCenter = { x: 12, y: 14 };
+  private regionId: string | null = null;
   private cinematicZoom = 1;
   private startBounds: { x: number; y: number; width: number; height: number } | undefined;
   private setupExpanded = true;
@@ -57,6 +63,8 @@ export class PixiRenderer {
   resetCamera() { this.snapCamera = true; this.followBlend = 0; }
   private minimap: CourseMinimap | null = null;
   get camera() {
+    if (this.viewMode === "overview")
+      return { ...overviewCameraFrame(this.world, this.viewport, this.overviewCenter, this.overviewZoom), regionId: this.regionId };
     if (this.startBounds && this.viewMode === "follow" && this.simulationTick === 0)
       return startCameraFrame(this.world, this.viewport, this.startBounds, this.setupExpanded, this.zoom);
     const frame = cameraFrame(
@@ -77,13 +85,81 @@ export class PixiRenderer {
     return { ...frame, zoom: this.zoom };
   }
   setZoom(zoom: number) {
-    if (Number.isFinite(zoom)) this.zoom = Math.max(0.75, Math.min(2, zoom));
+    if (!Number.isFinite(zoom)) return;
+    if (this.viewMode === "overview")
+      this.zoomOverview(zoom, { x: this.viewport.width / 2, y: this.viewport.height / 2 });
+    else this.zoom = Math.max(CAMERA_ZOOM.follow.min, Math.min(CAMERA_ZOOM.follow.max, zoom));
+  }
+  private updateOverview(center: CameraPoint, zoom: number) {
+    const frame = overviewCameraFrame(this.world, this.viewport, center, zoom);
+    this.overviewZoom = frame.zoom;
+    this.overviewCenter = {
+      x: (this.viewport.width / 2 - frame.x) / frame.scale,
+      y: (this.viewport.height / 2 - frame.y) / frame.scale,
+    };
+    this.regionId = null;
+    this.viewMode = "overview";
+  }
+  private enterOverview() {
+    if (this.viewMode === "overview") return;
+    const frame = this.camera;
+    const base = overviewCameraFrame(this.world, this.viewport, this.overviewCenter).scale;
+    this.updateOverview({
+      x: (this.viewport.width / 2 - frame.x) / frame.scale,
+      y: (this.viewport.height / 2 - frame.y) / frame.scale,
+    }, frame.scale / base);
+  }
+  private zoomOverview(zoom: number, point: CameraPoint) {
+    const before = this.camera;
+    const anchor = { x: (point.x - before.x) / before.scale, y: (point.y - before.y) / before.scale };
+    const next = overviewCameraFrame(this.world, this.viewport, this.overviewCenter, zoom);
+    this.updateOverview({
+      x: anchor.x - (point.x - this.viewport.width / 2) / next.scale,
+      y: anchor.y - (point.y - this.viewport.height / 2) / next.scale,
+    }, next.zoom);
+  }
+  zoomAt(point: CameraPoint, factor: number) {
+    if (!Number.isFinite(factor) || factor <= 0) return;
+    this.enterOverview();
+    this.zoomOverview(this.overviewZoom * factor, point);
+  }
+  panBy(delta: CameraPoint) {
+    if (!Number.isFinite(delta.x) || !Number.isFinite(delta.y)) return;
+    this.enterOverview();
+    const frame = this.camera;
+    this.updateOverview({
+      x: (this.viewport.width / 2 - frame.x - delta.x) / frame.scale,
+      y: (this.viewport.height / 2 - frame.y - delta.y) / frame.scale,
+    }, this.overviewZoom);
+  }
+  focusBounds(bounds: CameraBounds, id: string | null = null) {
+    const base = overviewCameraFrame(this.world, this.viewport, this.overviewCenter).scale;
+    const scale = Math.max(0.0001, Math.min(
+      Math.max(1, this.viewport.width - 64) / (bounds.width + 2),
+      Math.max(1, this.viewport.height - 96) / (bounds.height + 2),
+    ));
+    this.updateOverview({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }, scale / base);
+    this.regionId = id;
+  }
+  focusMinimap(point: CameraPoint) {
+    const world = this.minimap?.worldPointAt(point);
+    if (!world) return false;
+    const width = Math.min(24, this.world.width), height = Math.min(18, this.world.height);
+    this.focusBounds({ x: world.x - width / 2, y: world.y - height / 2, width, height });
+    return true;
   }
   get labelsVisible() {
     return this.namesVisible;
   }
   setView(mode: ViewMode) {
-    this.viewMode = mode;
+    if (mode === "overview")
+      this.updateOverview({ x: this.world.width / 2, y: this.world.height / 2 }, 1);
+    else {
+      this.viewMode = mode;
+      this.regionId = null;
+      this.snapCamera = true;
+      this.followBlend = 1;
+    }
   }
   setParticipantNames(names: readonly string[]) {
     this.participantNames = names;
@@ -113,6 +189,7 @@ export class PixiRenderer {
     names: readonly string[] = [],
   ) {
     this.world = { width: scene.width, height: scene.height };
+    this.overviewCenter = { x: scene.width / 2, y: scene.height / 2 };
     this.count = count;
     this.startBounds = scene.startLayout?.bounds;
     this.participantNames = names;

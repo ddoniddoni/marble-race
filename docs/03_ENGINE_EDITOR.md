@@ -196,6 +196,13 @@ rotor와 moving-platform은 kinematic body를 사용한다. position-based kinem
 
 빠른 구슬의 벽 관통 방지를 위해 구슬의 CCD를 검토하고 기본 프로필에서 켠 상태로 벤치마크한다. CCD를 켰다고 모든 센서 통과가 보장된다고 가정하지 않는다. 얇은 벽, 좁은 틈, 고속 회전봉과의 충돌 테스트가 필요하다. Rapier 문서는 CCD를 빠른 물체의 접촉 누락을 줄이기 위한 기법으로 설명한다. [E2]
 
+
+구슬은 각각 독립된 dynamic body와 원형 collider를 가지며 게임 코스에서도 서로 충돌한다. arcade-flow-v1 실행의 충돌 그룹은 장애물 membership 1/filter 2, 구슬 membership 2/filter 3으로 두어 구슬↔구슬과 구슬↔장애물 접촉을 모두 허용한다. 접촉 힘과 반발·회전은 Rapier가 계산하며 참가자별 크기·질량·마찰·반발 계수는 동일하다. 완주 구슬은 기존처럼 비활성화해 다음 구슬의 결승 진입을 막지 않는다.
+
+연쇄 충돌을 위해 게임 코스의 고정 1/60초 tick 안에서 Rapier를 4회(각 1/240초) 적분한다. 회전봉·왕복 발판도 각 microstep의 중간 시각으로 움직이며, core/race tick·순위 시간·장애물 킥/정체 해소·분출의 발동 주기는 종전처럼 1/60초다. 게임 접촉 설정은 solver 8회, 최대 CCD substep 4회, contact natural frequency 120Hz, normalized allowed linear error 0.0005, normalized prediction distance 0.2, 구슬 contact skin 0.005 및 microstep당 최대 상대 이동 0.15의 soft CCD prediction을 사용한다. 원형 collider 반지름 0.22를 바꾸거나 접촉 후 좌표를 강제로 벌리지 않는다. P0/classic-v1의 1/60초·solver 4회·기존 접촉 설정은 유지한다.
+
+이 변경은 맵 형상 변경이 아닌 실행 엔진의 물리 규칙 변경이다. 기존 맵/템플릿 JSON과 hash는 유지하고 arcade 실행 simulationVersion에 .marble-contacts-v1을 붙여 이전 통과 모드와 구분한다. 같은 map hash/seed만으로 이전 엔진 결과를 재현한다고 주장하지 않는다. 좁은 통로에서는 구슬이 서로 밀며 대기할 수 있으며, 기존 능동 킥·정체 해소 규칙도 실제 충돌 제약을 따른다. 모든 인원/코스의 무정체·완주와 대규모 성능은 별도 실측 대상이다.
+
 `finishPace: 'dramatic-v1'`은 arcade-flow-v1에만 선택해서 적용하는 결승 접근 규칙이다. 결승 12단위 전부터 마지막 5단위까지 위치 기반 smoothstep으로 linear damping을 0→6으로 올리고, 마지막 5단위에서는 6을 유지한다. 매 fixed tick의 물리 step 전에 실제 활성 구슬 body에 설정한다. 구간 밖으로 돌아가거나 유효 통과 없이 결승 y 아래로 나간 활성 구슬은 감쇠를 0으로 되돌린다. 완주 body는 기존 규칙대로 비활성화한다. 참가자 이름/ID/순위는 감속 계산에 사용하지 않는다. 중력·장애물 회전·접촉 킥·정체 해소 규칙과 결승 판정 tick은 유지한다. 기존 맵에서 필드를 생략하면 감속하지 않으며, 규칙은 map hash와 simulationVersion에 구분해 기록한다. 실제 역전 빈도와 완주 시간은 별도 물리 검증 대상이다.
 
 `finishAir: 'pulse-v1'`은 arcade-flow-v1의 선택 에어 팝 규칙이다. 결승 5~1.7단위 전, 결승 x 범위에 좌우 0.8을 더한 영역에 적격 활성 구슬이 있고 직전 분출 후 72tick이 지나면 해당 구슬들을 위로 띄운다. y 속도 -6.8을 목표로 최대 30의 위쪽 impulse와 바깥 방향 1.4의 측면 impulse를 적용한다. 이름/ID/순위를 사용하지 않고, 구슬마다 최대 한 번만 발동한다. 이미 위로 움직이는 구슬은 다음 분출을 기다릴 수 있다. 분출 후 24tick은 결승 감쇠를 풀고 18tick 동안 원래 감쇠로 복귀한다. core의 tick/위치/구슬 수 이벤트로 렌더러와 선택 효과음을 연결한다. 에어 팝 코스는 기존 결승 0.4배 연출을 해제해 회전봉이 정상 속도로 움직인다. 생략한 과거 맵은 종전 규칙을 유지한다. 실제 상승/역전/완주는 별도 검증 대상이다.

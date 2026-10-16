@@ -15,8 +15,10 @@ import {
   type Participant,
   type MapDocument,
 } from "../contracts/schemas";
-import type { ViewMode } from "../renderer/camera";
+import { courseRegions, type CourseRegion, type ViewMode } from "../renderer/camera";
+import { CameraInput } from "../renderer/CameraInput";
 import {
+  ARCADE_MARBLE_CONTACTS,
   initPhysics,
   physicsResources,
   RapierPhysics,
@@ -61,7 +63,12 @@ export type Snapshot = {
   soundEnabled: boolean;
   phase: Phase;
   namesVisible: boolean;
+  cameraRegions: readonly CourseRegion[];
   camera: {
+    x: number;
+    y: number;
+    scale: number;
+    regionId?: string | null;
     top: number;
     left: number;
     visibleWidth: number;
@@ -120,6 +127,8 @@ export class GameRuntime {
   private participantNames: readonly string[];
   private core!: SimulationCore;
   private readonly renderer = new PixiRenderer();
+  private readonly regions: readonly CourseRegion[];
+  private cameraInput: CameraInput | null = null;
   private raf: number | null = null;
   private disposed = false;
   private active = false;
@@ -175,6 +184,7 @@ export class GameRuntime {
     this.raceEnabled = Boolean(source);
     this.scene = source ? expandedStart({ ...loaded.scene, stages: source.stages }, count) : loaded.scene;
     this.map = loaded.map;
+    this.regions = courseRegions(this.scene, this.map.spawn);
   }
   static async create(
     host: HTMLElement,
@@ -224,6 +234,24 @@ export class GameRuntime {
       runtimeResources.listeners += 2;
       runtimeResources.runtimes++;
       runtime.active = true;
+      runtime.cameraInput = new CameraInput(runtime.renderer.canvas, {
+        zoom: (point, factor) => {
+          runtime.renderer.zoomAt(point, factor);
+          runtime.redrawCamera();
+        },
+        pan: (delta) => {
+          runtime.renderer.panBy(delta);
+          runtime.redrawCamera();
+        },
+        minimap: (point) => {
+          const changed = runtime.renderer.focusMinimap(point);
+          if (changed) runtime.redrawCamera();
+          return changed;
+        },
+        fit: () => runtime.setView("overview"),
+        follow: () => runtime.setView("follow"),
+      });
+      runtimeResources.listeners += runtime.cameraInput.listenerCount;
       if (debug) {
         runtime.bridge = { read: () => runtime.diagnostics(), resources };
         window.__MARBLE_POC__ = runtime.bridge;
@@ -502,17 +530,27 @@ export class GameRuntime {
     if (this.disposed) return;
     this.renderer.setSetupExpanded(expanded);
   }
+  private redrawCamera() {
+    if (this.disposed) return;
+    this.renderer.render(this.core.previous, this.core.poses, 1, 0);
+    this.publish();
+  }
   setView(mode: ViewMode) {
     if (this.disposed) return;
     this.renderer.setView(mode);
-    this.renderer.render(this.core.previous, this.core.poses, 1);
-    this.publish();
+    this.redrawCamera();
   }
   setZoom(zoom: number) {
     if (this.disposed) return;
     this.renderer.setZoom(zoom);
-    this.renderer.render(this.core.previous, this.core.poses, 1);
-    this.publish();
+    this.redrawCamera();
+  }
+  focusRegion(id: string) {
+    if (this.disposed) return;
+    const region = this.regions.find((item) => item.id === id);
+    if (!region) return;
+    this.renderer.focusBounds(region.bounds, region.id);
+    this.redrawCamera();
   }
   setNamesVisible(visible: boolean) {
     if (this.disposed) return;
@@ -533,6 +571,7 @@ export class GameRuntime {
       race: this.raceSnapshot(),
       soundEnabled: this.audio.enabled,
       camera: this.renderer.camera,
+      cameraRegions: this.regions,
       namesVisible: this.renderer.labelsVisible,
       sceneId: this.scene.id,
       mapHash: this.mapHash,
@@ -559,6 +598,17 @@ export class GameRuntime {
       : this.scene.physicsProfile === "arcade-flow-v1"
         ? (this.scene.startLayout ? "arcade-flow-expanded-start-benchmark-v1" : "arcade-flow-benchmark-v2")
         : "p0-fixed-v1";
+    const ruleVersion = this.scene.finishAir === "pulse-v2"
+      ? (this.race ? "arcade-flow-all-finish-air-v2"
+        : this.scene.startLayout ? "arcade-flow-expanded-air-benchmark-v2" : "arcade-flow-air-benchmark-v2")
+      : this.scene.finishAir === "pulse-v1"
+      ? (this.race ? "arcade-flow-all-finish-air-v1"
+        : this.scene.startLayout ? "arcade-flow-expanded-air-benchmark-v1" : "arcade-flow-air-benchmark-v1")
+      : this.scene.finishPace === "dramatic-v1"
+      ? (this.race ? "arcade-flow-all-finish-dramatic-v1"
+        : this.scene.startLayout ? "arcade-flow-expanded-dramatic-benchmark-v1"
+          : "arcade-flow-dramatic-benchmark-v1")
+      : hasEdgePivot ? `${simulationVersion}.edge-pivot-v1` : simulationVersion;
     return {
       ...this.snapshot(),
       resources: resources(),
@@ -566,17 +616,9 @@ export class GameRuntime {
       poses: this.core.poses.map((p) => ({ ...p })),
       tickerStarted: this.renderer.tickerStarted,
       participantNames: [...this.participantNames],
-      simulationVersion: this.scene.finishAir === "pulse-v2"
-        ? (this.race ? "arcade-flow-all-finish-air-v2"
-          : this.scene.startLayout ? "arcade-flow-expanded-air-benchmark-v2" : "arcade-flow-air-benchmark-v2")
-        : this.scene.finishAir === "pulse-v1"
-        ? (this.race ? "arcade-flow-all-finish-air-v1"
-          : this.scene.startLayout ? "arcade-flow-expanded-air-benchmark-v1" : "arcade-flow-air-benchmark-v1")
-        : this.scene.finishPace === "dramatic-v1"
-        ? (this.race ? "arcade-flow-all-finish-dramatic-v1"
-          : this.scene.startLayout ? "arcade-flow-expanded-dramatic-benchmark-v1"
-            : "arcade-flow-dramatic-benchmark-v1")
-        : hasEdgePivot ? `${simulationVersion}.edge-pivot-v1` : simulationVersion,
+      simulationVersion: this.scene.physicsProfile === "arcade-flow-v1"
+        ? `${ruleVersion}.${ARCADE_MARBLE_CONTACTS.version}` : ruleVersion,
+      marbleContacts: true,
       finishPace: this.scene.finishPace && this.scene.finish ? {
         ...FINISH_PACE, startY: this.scene.finish.y - FINISH_PACE.approachDistance,
         fullY: this.scene.finish.y - FINISH_PACE.fullDistance,
@@ -601,6 +643,11 @@ export class GameRuntime {
       cancelAnimationFrame(this.raf);
       this.raf = null;
       runtimeResources.rafs--;
+    }
+    if (this.cameraInput) {
+      runtimeResources.listeners -= this.cameraInput.listenerCount;
+      this.cameraInput.dispose();
+      this.cameraInput = null;
     }
     if (this.active) {
       document.removeEventListener("visibilitychange", this.onVisibility);

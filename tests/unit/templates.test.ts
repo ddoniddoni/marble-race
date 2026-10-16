@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import { AllFinishRace } from "../../src/game/core/race";
 import { TEMPLATES } from "../../src/game/templates";
 import {
   canonicalizeMap,
@@ -32,20 +33,27 @@ it.each(
     ([20, 100] as const).map((count) => ({ template, count })),
   ),
 )(
-  "$template.id / $count marbles: 3,600 actual Rapier ticks stay finite and inside the cabinet",
+  "$template.id / $count marbles: 3,600 actual Rapier ticks retire finishers and stay inside the cabinet",
   ({ template, count }) => {
     const world = physics(template.map, count);
     const initial = structuredClone(world.poses);
+    const race = new AllFinishRace(count, world.scene.finish!, world.scene);
     for (let tick = 1; tick <= 3600; tick++) {
       world.step(tick);
-      if (tick % 60 === 0)
-        for (const pose of world.poses.slice(0, count)) {
+      race.step(tick, world.previous, world.poses, world.marbleStates);
+      world.retireMarbles(race.newlySettled);
+      if (tick % 60 === 0) {
+        expect(race.dnf, `${template.id} / ${count} / tick ${tick}: active marble escaped`).toBe(0);
+        for (const [index, pose] of world.poses.slice(0, count).entries()) {
           expect(Number.isFinite(pose.x) && Number.isFinite(pose.y)).toBe(true);
           expect(pose.x).toBeGreaterThan(0.5);
-          expect(pose.x).toBeLessThan(23.5);
+          expect(pose.x, JSON.stringify({ template: template.id, tick, index, pose,
+            previous: world.previous[index], finish: template.map.finish,
+            result: race.entries.find((entry) => entry.index === index) })).toBeLessThan(23.5);
           expect(pose.y).toBeGreaterThan(0.5);
           expect(pose.y).toBeLessThan(template.map.world.height - 0.4);
         }
+      }
     }
     expect(world.poses).not.toEqual(initial);
     const inLowerArea = world.poses
@@ -57,6 +65,8 @@ it.each(
         count,
         simulatedTicks: 3600,
         inLowerArea,
+        completed: race.completed,
+        dnf: race.dnf,
         awake: world.counts().awake,
       }),
     );

@@ -69,3 +69,68 @@ export function startCameraFrame(
     side + width / 2 - (bounds.x + bounds.width / 2) * scale,
     top + height / 2 - (bounds.y + bounds.height / 2) * scale, scale, zoom);
 }
+
+
+export const CAMERA_ZOOM = {
+  follow: { min: 0.75, max: 2 },
+  overview: { min: 1, max: 64 },
+} as const;
+export type CameraPoint = { x: number; y: number };
+export type CameraBounds = CameraPoint & { width: number; height: number };
+export type CourseRegion = { id: string; label: string; title: string; bounds: CameraBounds };
+
+export function overviewCameraFrame(
+  world: { width: number; height: number },
+  viewport: { width: number; height: number },
+  center: CameraPoint,
+  zoom = 1,
+) {
+  const safeZoom = Math.max(CAMERA_ZOOM.overview.min, Math.min(CAMERA_ZOOM.overview.max, zoom));
+  const scale = Math.max(0.0001, Math.min(
+    Math.max(1, viewport.width - 32) / world.width,
+    Math.max(1, viewport.height - 32) / world.height,
+  ) * safeZoom);
+  const position = (size: number, length: number, target: number) =>
+    length * scale <= Math.max(1, size - 32)
+      ? (size - length * scale) / 2
+      : Math.max(size - 16 - length * scale, Math.min(16, size / 2 - target * scale));
+  return {
+    ...cameraFromTransform(world, viewport,
+      position(viewport.width, world.width, center.x),
+      position(viewport.height, world.height, center.y), scale, safeZoom),
+    mode: "overview" as const,
+  };
+}
+
+export function courseRegions(
+  scene: import("../core/types").Scene,
+  spawn?: CameraBounds,
+): readonly CourseRegion[] {
+  const offset = scene.startLayout?.courseOffset ?? { x: 0, y: 0 };
+  const courseWidth = Math.max(1, scene.width - offset.x * 2);
+  const launch = scene.startLayout?.bounds ?? spawn ?? {
+    x: offset.x, y: 0, width: courseWidth, height: Math.min(8, scene.height),
+  };
+  const finishY = scene.finish?.y ?? scene.height - 1;
+  const stageStart = launch.y + launch.height;
+  const stages = scene.stages?.length ? scene.stages : Array.from({ length: 4 }, (_, index) => ({
+    y: stageStart + Math.max(1, finishY - stageStart) * index / 4,
+    title: `${index + 1}구역`,
+  }));
+  const regions: CourseRegion[] = [
+    { id: "start", label: "출발", title: "출발 구역", bounds: launch },
+    ...stages.map((stage, index) => {
+      const top = Math.max(0, stage.y - 1);
+      const bottom = stages[index + 1]?.y ?? Math.min(scene.height, finishY + 1);
+      return { id: `stage-${index}`, label: `${index + 1}구역`, title: stage.title,
+        bounds: { x: offset.x, y: top, width: courseWidth, height: Math.max(2, bottom - top) } };
+    }),
+  ];
+  regions.push({ id: "finish", label: "결승", title: "결승 입구", bounds: {
+    x: (scene.finish?.left ?? scene.width / 2) - 5,
+    y: Math.max(0, finishY - 9),
+    width: (scene.finish ? scene.finish.right - scene.finish.left : 2) + 10,
+    height: Math.min(12, scene.height),
+  } });
+  return regions;
+}

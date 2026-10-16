@@ -66,7 +66,7 @@ test("20 stress resets and 20 game route round trips keep one engine", async ({
   expect(baseline).toEqual({
     runtimes: 1,
     rafs: 1,
-    listeners: 2,
+    listeners: 10,
     worlds: 1,
     bodies: 320,
     colliders: 320,
@@ -89,7 +89,7 @@ test("20 stress resets and 20 game route round trips keep one engine", async ({
       .toMatchObject({
         runtimes: 1,
         rafs: 1,
-        listeners: 2,
+        listeners: 10,
         worlds: 1,
         renderers: 1,
         observers: 1,

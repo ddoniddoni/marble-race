@@ -79,6 +79,12 @@ export class CourseMinimap {
       .fill({ color: 0x121719, alpha: 0.66 })
       .stroke({ color: 0x66f1eb, width: 1, alpha: 0.25 });
   }
+  worldPointAt(point: { x: number; y: number }) {
+    if (!this.root.visible || this.map.scale.x <= 0) return null;
+    const x = (point.x - this.root.x - this.map.x) / this.map.scale.x;
+    const y = (point.y - this.root.y - this.map.y) / this.map.scale.y;
+    return x >= 0 && x <= this.scene.width && y >= 0 && y <= this.scene.height ? { x, y } : null;
+  }
   render(
     marbles: readonly Container[],
     count: number,

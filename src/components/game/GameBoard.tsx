@@ -2,7 +2,7 @@
 import RaceOverlay from "./RaceOverlay";
 import type { RefObject } from "react";
 import type { Snapshot } from "@/game/runtime/GameRuntime";
-import type { ViewMode } from "@/game/renderer/camera";
+import { CAMERA_ZOOM, type ViewMode } from "@/game/renderer/camera";
 const phaseLabels = {
   ready: "출발 대기",
   countdown: "출발 카운트다운",
@@ -20,6 +20,7 @@ export default function GameBoard({
   onView,
   onNames,
   onZoom,
+  onRegion,
   onSound,
 }: {
   host: RefObject<HTMLDivElement | null>;
@@ -30,6 +31,7 @@ export default function GameBoard({
   onView: (mode: ViewMode) => void;
   onNames: (visible: boolean) => void;
   onZoom: (zoom: number) => void;
+  onRegion: (id: string) => void;
   onSound: () => void;
 }) {
   const ready = snapshot !== null && !error;
@@ -60,6 +62,7 @@ export default function GameBoard({
         onView={onView}
         onNames={onNames}
         onZoom={onZoom}
+        onRegion={onRegion}
         onSound={onSound}
       />
       <div className="playfield">
@@ -80,7 +83,7 @@ export default function GameBoard({
         )}
       </div>
       <div className="tracking-bar">
-        <span>{overview ? "전체 코스" : count > 100 && snapshot?.tick === 0 ? "출발 구슬 전체 보기" : "선두 그룹 따라가기"}</span>
+        <span>{overview ? (snapshot.camera.zoom > 1 ? "자유 탐색 · 드래그로 이동" : "전체 코스 · 휠로 확대") : count > 100 && snapshot?.tick === 0 ? "출발 구슬 전체 보기" : "선두 그룹 따라가기"}</span>
         <span>
           {Math.round(snapshot?.camera.top ?? 0)} /{" "}
           {snapshot?.camera.worldHeight ?? 72}
@@ -97,6 +100,7 @@ function ViewControls({
   onView,
   onNames,
   onZoom,
+  onRegion,
   onSound,
 }: {
   ready: boolean;
@@ -105,11 +109,13 @@ function ViewControls({
   onView: (mode: ViewMode) => void;
   onNames: (visible: boolean) => void;
   onZoom: (zoom: number) => void;
+  onRegion: (id: string) => void;
   onSound: () => void;
 }) {
   const namesVisible = snapshot?.namesVisible ?? count <= 20;
   const zoom = snapshot?.camera.zoom ?? 1;
   const overview = snapshot?.camera.mode === "overview";
+  const limits = overview ? CAMERA_ZOOM.overview : CAMERA_ZOOM.follow;
   return (
     <div className="view-controls" aria-label="화면 보기 설정">
       <button disabled={!ready} aria-pressed={snapshot?.soundEnabled ?? false} onClick={onSound}>
@@ -132,20 +138,43 @@ function ViewControls({
       <div className="zoom-controls">
         <button
           aria-label="화면 축소"
-          disabled={!ready || overview || zoom <= 0.75}
-          onClick={() => onZoom(zoom - 0.25)}
+          disabled={!ready || zoom <= limits.min}
+          onClick={() => onZoom(overview ? zoom / 1.25 : zoom - 0.25)}
         >
           −
         </button>
         <output aria-label="확대 배율">{zoom.toFixed(2)}×</output>
         <button
           aria-label="화면 확대"
-          disabled={!ready || overview || zoom >= 2}
-          onClick={() => onZoom(zoom + 0.25)}
+          disabled={!ready || zoom >= limits.max}
+          onClick={() => onZoom(overview ? zoom * 1.25 : zoom + 0.25)}
         >
           +
         </button>
       </div>
+      {overview && (
+        <button disabled={!ready} onClick={() => onView("overview")} aria-label="전체 코스에 맞추기">
+          전체 맞춤
+        </button>
+      )}
+      {overview && (
+        <div className="course-navigation" role="group" aria-label="구역별 확대">
+          <span className="course-navigation-label">구역 이동</span>
+          {snapshot?.cameraRegions.map((region) => (
+            <button
+              key={region.id}
+              disabled={!ready}
+              aria-label={`${region.label} 확대`}
+              aria-pressed={snapshot.camera.regionId === region.id}
+              title={region.title}
+              onClick={() => onRegion(region.id)}
+            >
+              {region.label}
+            </button>
+          ))}
+          <span className="course-gesture-hint">휠 확대 · 드래그 이동</span>
+        </div>
+      )}
     </div>
   );
 }

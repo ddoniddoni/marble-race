@@ -1303,3 +1303,30 @@ h2 {
   .roulette-studio .all-race-summary p { font-size: 10px; }
 }
 @media (max-height: 620px) { .roulette-studio .ranking-panel { top: 55px; bottom: 85px; } .roulette-studio .ranking-live-leaders { display: none; } }
+
+/* Manual course exploration uses the existing canvas and camera. */
+.roulette-studio .course-navigation {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+  width: max-content; max-width: calc(100vw - 36px); padding: 7px 9px;
+  border: 1px solid #66e8f12e; border-radius: 7px;
+  background: #0b1317eb; box-shadow: 0 8px 24px #0005; backdrop-filter: blur(12px);
+}
+.roulette-studio .course-navigation-label { color: #a0bbc5; font-size: 10px; margin-right: 3px; }
+.roulette-studio .course-navigation button {
+  min-height: 30px; padding: 0 10px; font-size: 11px; color: #d8eff2;
+  background: #17272d; border: 1px solid #b6e3e52b; border-radius: 4px;
+}
+.roulette-studio .course-navigation button:hover,
+.roulette-studio .course-navigation button[aria-pressed="true"] {
+  color: #baffea; border-color: #7ce6cb99; background: #193b39;
+}
+.roulette-studio .course-gesture-hint { color: #8fa8b3; font-size: 10px; margin-left: 5px; }
+.roulette-studio .zoom-controls output { width: 47px; }
+.canvas-host canvas:focus-visible { outline: 2px solid #66e8f1; outline-offset: -3px; }
+@media (max-width: 760px) {
+  .roulette-studio .course-navigation { max-width: calc(100vw - 24px); padding: 6px; gap: 4px; }
+  .roulette-studio .course-navigation button { padding: 0 8px; min-height: 30px; }
+  .roulette-studio .course-gesture-hint { display: none; }
+  .roulette-studio .zoom-controls output { width: 40px; }
+}

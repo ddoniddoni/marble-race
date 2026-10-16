@@ -148,9 +148,8 @@ function useGameRuntime(
   const error = current?.error ?? null;
   const [debug] = useState(
     () =>
-      process.env.NODE_ENV === "development" ||
-      (typeof window !== "undefined" &&
-        new URLSearchParams(window.location.search).get("debug") === "1"),
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("debug") === "1",
   );
   useEffect(() => {
     latestParticipants.current = participants;
@@ -255,6 +254,7 @@ function LabSession({
         onView={(mode) => runtime.current?.setView(mode)}
         onNames={(visible) => runtime.current?.setNamesVisible(visible)}
         onZoom={(zoom) => runtime.current?.setZoom(zoom)}
+        onRegion={(id) => runtime.current?.focusRegion(id)}
         onSound={() => { void runtime.current?.toggleSound(); }}
       />
       <aside className="control-dock" aria-label="플레이 설정">
@@ -292,58 +292,62 @@ function LabSession({
               {TEMPLATES.find((t) => t.id === selection.id)?.description ??
                 selection.title}
             </p>
-            <details className="tools-panel">
-              <summary>
-                물리 계측실 <span>LAB</span>
-              </summary>
-              <button
-                className="benchmark-select"
-                aria-pressed={selection.id === "benchmark"}
-                onClick={onBenchmarkScene}
-              >
-                P0 계측 장면 선택
-              </button>
-              <MeasurementPanel
-                snapshot={snapshot}
-                ready={Boolean(ready)}
-                onBenchmark={() => runtime.current?.benchmark()}
-              />
-            </details>
-            <MapContractPanel
-              map={map}
-              count={count}
-              hash={snapshot?.mapHash}
-              onLoad={onLoadMap}
-            />
-            {debug && snapshot && (
-              <details className="debug">
-                <summary>개발 계측 HUD</summary>
-                <dl>
-                  <div>
-                    <dt>구슬 / 활성</dt>
-                    <dd>
-                      {count} / {snapshot.awake}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>body / collider</dt>
-                    <dd>
-                      {snapshot.bodies} / {snapshot.colliders}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>tick · 고정 dt</dt>
-                    <dd>{snapshot.tick} · 1/60 s</dd>
-                  </div>
-                  <div>
-                    <dt>초기화 / 버린 현실 시간</dt>
-                    <dd>
-                      {snapshot.initMs.toFixed(0)} /{" "}
-                      {snapshot.droppedMs.toFixed(0)} ms
-                    </dd>
-                  </div>
-                </dl>
-              </details>
+            {debug && (
+              <>
+                <details className="tools-panel">
+                  <summary>
+                    물리 계측실 <span>LAB</span>
+                  </summary>
+                  <button
+                    className="benchmark-select"
+                    aria-pressed={selection.id === "benchmark"}
+                    onClick={onBenchmarkScene}
+                  >
+                    P0 계측 장면 선택
+                  </button>
+                  <MeasurementPanel
+                    snapshot={snapshot}
+                    ready={Boolean(ready)}
+                    onBenchmark={() => runtime.current?.benchmark()}
+                  />
+                </details>
+                <MapContractPanel
+                  map={map}
+                  count={count}
+                  hash={snapshot?.mapHash}
+                  onLoad={onLoadMap}
+                />
+                {snapshot && (
+                  <details className="debug">
+                    <summary>개발 계측 HUD</summary>
+                    <dl>
+                      <div>
+                        <dt>구슬 / 활성</dt>
+                        <dd>
+                          {count} / {snapshot.awake}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>body / collider</dt>
+                        <dd>
+                          {snapshot.bodies} / {snapshot.colliders}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>tick · 고정 dt</dt>
+                        <dd>{snapshot.tick} · 1/60 s</dd>
+                      </div>
+                      <div>
+                        <dt>초기화 / 버린 현실 시간</dt>
+                        <dd>
+                          {snapshot.initMs.toFixed(0)} /{" "}
+                          {snapshot.droppedMs.toFixed(0)} ms
+                        </dd>
+                      </div>
+                    </dl>
+                  </details>
+                )}
+              </>
             )}
           </section>
         </div>
@@ -395,7 +399,7 @@ function LabSession({
           {snapshot?.notice ??
             (snapshot?.race
               ? (map.physicsProfile === "arcade-flow-v1"
-                ? "전원 도착 후 종료 · 우측 순위 누적 · 구슬끼리는 통과"
+                ? "전원 도착 후 종료 · 우측 순위 누적 · 구슬끼리 밀고 튕깁니다"
                 : "전원 도착 후 종료 · 결승 통과 순위가 누적됩니다.")
               : "물리 계측 · 동일한 출발 조건으로 실행합니다.")}
         </p>
