@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#080d14"/>
+  <path d="M815 -30 L1090 160 L830 355 L1100 550 L980 660" fill="none" stroke="#30424e" stroke-width="80" stroke-linejoin="round"/>
+  <path d="M815 -30 L1090 160 L830 355 L1100 550 L980 660" fill="none" stroke="#7ce6cb" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="1025" cy="110" r="41" fill="#7ce6cb"/><circle cx="925" cy="280" r="34" fill="#ffbd69"/><circle cx="990" cy="468" r="44" fill="#ff83aa"/>
+  <circle cx="1012" cy="97" r="10" fill="#fff" opacity=".65"/><circle cx="914" cy="269" r="8" fill="#fff" opacity=".65"/><circle cx="976" cy="455" r="11" fill="#fff" opacity=".65"/>
+  <text x="72" y="170" fill="#7ce6cb" font-family="sans-serif" font-size="22" letter-spacing="6">YOUR NAMES. YOUR RACE.</text>
+  <text x="66" y="300" fill="#eaf2f5" font-family="sans-serif" font-weight="800" font-size="104" letter-spacing="-5">MARBLE</text>
+  <text x="66" y="410" fill="#eaf2f5" font-family="sans-serif" font-weight="800" font-size="104" letter-spacing="-5">RUN</text>
+  <text x="72" y="526" fill="#a6bbc5" font-family="sans-serif" font-size="24" letter-spacing="3">PLAY · RACE · REPEAT</text>
+</svg>
