@@ -243,12 +243,12 @@ P7 출시 검증을 수행해 줘. 성능, 모바일 플레이, 접근성, 실�
 
 ### GitHub Pages 출시 절차와 SEO/GEO 점검
 
-현재는 준비 단계다. 아래 계정 설정·검색 등록·배포·외부 색인은 실행하지 않았다. 구현 파일은 `.github/workflows/pages.yml`, `.env.example`, `next.config.ts`, `src/lib/site.ts`이며 주소·서비스명 변경 시 메타데이터와 안내 본문을 함께 검토한다.
+2026-10-24 Pages 활성화·main 릴리스·첫 배포와 공개 사이트 확인을 완료했다(PROGRESS 43절). 검색 서비스 소유 확인·사이트맵 제출·외부 색인은 아직 실행하지 않았다. 아래는 후속 릴리스에도 사용하는 절차다. 구현 파일은 `.github/workflows/pages.yml`, `.env.example`, `next.config.ts`, `src/lib/site.ts`이며 주소·서비스명 변경 시 메타데이터와 안내 본문을 함께 검토한다.
 
 1. **릴리스 준비**: 실제 서비스명과 최종 도메인을 확정한다. 현재 기본 주소는 `https://ddoniddoni.github.io/marble-race/`. Next.js 16.4.3 보안 패치와 회귀 검증을 적용했다(PROGRESS 42절). 각 릴리스 시점에도 의존성 보안 점검을 다시 수행한다. 모바일 실제 기기·대규모 인원 성능과 P7 검증을 정적 빌드 통과로 대체하지 않는다.
 2. **주소/검증 값**: 로컬은 `.env.example`을 참고해 공개 설정을 빌드 환경에 제공한다. Actions는 Settings → Secrets and variables → Actions → Variables의 `SITE_URL`을 사용한다. `GOOGLE_SITE_VERIFICATION`, `BING_SITE_VERIFICATION`, `NAVER_SITE_VERIFICATION`은 발급받은 meta content만 입력한다. 전부 공개 확인용 값이며 서버 비밀키가 아니다. 빈 값이면 태그를 생성하지 않는다. 네이버 루트 호스트 소유 확인 제약은 아키텍처 9절을 따른다.
 3. **로컬 검증**: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, `npm run build:pages`, `npm run test:pages`를 수행한다. 커스텀 도메인을 시험할 때는 빌드와 `test:pages`에 같은 `SITE_URL`을 제공한다. `node scripts/serve-pages.mjs`는 정적 결과를 `http://127.0.0.1:3101/marble-race/`에 띄우는 로컬 확인용이다. `next start`로 정적 export를 확인하지 않는다.
-4. **Git Flow**: 기능 PR은 develop으로 통합한다. 실제 공개 릴리스는 승인된 develop → main 전용 PR로 승격한다. 현재 main이 없으므로 최초 승격은 별도 Git 작업으로 진행한다. 커밋·push·PR·병합·배포는 이 문서만으로 자동 실행하지 않는다.
+4. **Git Flow**: 기능 PR은 develop으로 통합한다. 실제 공개 릴리스는 승인된 develop → main 전용 PR로 승격한다. main과 develop이 있으며 저장소 기본 브랜치는 main이다. 후속 안정 릴리스도 develop → main 전용 PR로 승격한다. 커밋·push·PR·병합·배포는 이 문서만으로 자동 실행하지 않는다.
 5. **Pages 최초 설정**: 저장소 Settings → Pages → Source를 GitHub Actions로 선택한다. `github-pages` environment의 배포 브랜치는 main으로 제한한다. 수동 workflow가 저장소 기본 브랜치에 있어야 Actions에 표시되므로 최초 릴리스 때 기본 브랜치 정책도 확인한다. 별도 도메인이 있으면 Pages/DNS/HTTPS를 먼저 구성한다.
 6. **수동 배포**: Actions의 `Publish GitHub Pages`에서 main을 선택해 Run workflow를 실행한다. push만으로 배포되지 않으며 main 이외의 수동 실행은 건너뛴다. 워크플로는 lint·typecheck·단위·정적 빌드·데스크톱/모바일 Chromium E2E 후 `out/`만 업로드한다. 빌드 실패를 무시하거나 미완료 산출물을 수동 업로드하지 않는다.
 7. **배포 직후**: 실제 HTTPS에서 루트/guide/play 직접 진입·새로고침, JS/CSS/PNG/SVG/WASM 로드, 게임 시작·일시정지·재시작, canonical/OG 이미지 절대 주소, sitemap XML, 잘못된 URL의 404를 확인한다. 루트 robots가 Googlebot/Bingbot/Yeti/OAI-SearchBot와 필요한 게임/스타일 리소스를 차단하지 않는지 확인한다. 프로젝트 하위 robots만 보고 통과 판정하지 않는다.
