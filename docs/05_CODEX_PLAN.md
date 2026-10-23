@@ -223,7 +223,7 @@ public/unlisted/private와 토큰 기반 최소 DTO, 철회/만료, no-store를 
 
 신고, 관리자 노출 중단, 에셋 차단, 개인정보 기본값, 계정 삭제와 실패 재시도 절차를 검증한다. DB와 Storage의 삭제 실패를 추적하는 비공개 기록과 안전한 운영 경로를 마련한다. 약관과 개인정보 안내의 실제 수집 항목, 공유, 보존 정책을 서비스 구현과 일치시킨다. 법률 적합성을 자동으로 인증했다고 표시하지 않는다.
 
-Vercel preview에서 WASM, 인증 callback, signed asset, 공개 링크, 이미지 업로드를 테스트하고 production 설정과 다름을 구분한다. 운영용 유료 플랜 필요 여부와 quota를 확인한다. 배포나 운영 DB 적용은 사용자 요청 전 실행하지 않는다.
+현재 게임은 GitHub Pages 정적 산출물에서 WASM·코스·이름 입력·재시작과 검색 메타데이터를 검증한다. P5 이후 인증 callback, signed asset, 공개 링크, 이미지 업로드는 02_ARCHITECTURE.md 9절에서 선택한 별도 서버 환경에서도 검증하고 preview와 production의 차이를 구분한다. 운영 플랜과 quota를 확인한다. 배포나 운영 DB 적용은 사용자 요청 전 실행하지 않는다.
 
 ### Gate
 
@@ -240,6 +240,24 @@ P7 출시 검증을 수행해 줘. 성능, 모바일 플레이, 접근성, 실�
 사용자 요청 없이 운영 DB 변경, Git push, 실제 배포는 하지 마.
 최종 출시 차단 항목과 남은 위험을 PROGRESS.md에 명확하게 표시해 줘.
 ```
+
+### GitHub Pages 출시 절차와 SEO/GEO 점검
+
+현재는 준비 단계다. 아래 계정 설정·검색 등록·배포·외부 색인은 실행하지 않았다. 구현 파일은 `.github/workflows/pages.yml`, `.env.example`, `next.config.ts`, `src/lib/site.ts`이며 주소·서비스명 변경 시 메타데이터와 안내 본문을 함께 검토한다.
+
+1. **릴리스 준비**: 실제 서비스명과 최종 도메인을 확정한다. 현재 기본 주소는 `https://ddoniddoni.github.io/marble-race/`. Next.js 16.4.3 보안 패치와 회귀 검증을 적용했다(PROGRESS 42절). 각 릴리스 시점에도 의존성 보안 점검을 다시 수행한다. 모바일 실제 기기·대규모 인원 성능과 P7 검증을 정적 빌드 통과로 대체하지 않는다.
+2. **주소/검증 값**: 로컬은 `.env.example`을 참고해 공개 설정을 빌드 환경에 제공한다. Actions는 Settings → Secrets and variables → Actions → Variables의 `SITE_URL`을 사용한다. `GOOGLE_SITE_VERIFICATION`, `BING_SITE_VERIFICATION`, `NAVER_SITE_VERIFICATION`은 발급받은 meta content만 입력한다. 전부 공개 확인용 값이며 서버 비밀키가 아니다. 빈 값이면 태그를 생성하지 않는다. 네이버 루트 호스트 소유 확인 제약은 아키텍처 9절을 따른다.
+3. **로컬 검증**: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, `npm run build:pages`, `npm run test:pages`를 수행한다. 커스텀 도메인을 시험할 때는 빌드와 `test:pages`에 같은 `SITE_URL`을 제공한다. `node scripts/serve-pages.mjs`는 정적 결과를 `http://127.0.0.1:3101/marble-race/`에 띄우는 로컬 확인용이다. `next start`로 정적 export를 확인하지 않는다.
+4. **Git Flow**: 기능 PR은 develop으로 통합한다. 실제 공개 릴리스는 승인된 develop → main 전용 PR로 승격한다. 현재 main이 없으므로 최초 승격은 별도 Git 작업으로 진행한다. 커밋·push·PR·병합·배포는 이 문서만으로 자동 실행하지 않는다.
+5. **Pages 최초 설정**: 저장소 Settings → Pages → Source를 GitHub Actions로 선택한다. `github-pages` environment의 배포 브랜치는 main으로 제한한다. 수동 workflow가 저장소 기본 브랜치에 있어야 Actions에 표시되므로 최초 릴리스 때 기본 브랜치 정책도 확인한다. 별도 도메인이 있으면 Pages/DNS/HTTPS를 먼저 구성한다.
+6. **수동 배포**: Actions의 `Publish GitHub Pages`에서 main을 선택해 Run workflow를 실행한다. push만으로 배포되지 않으며 main 이외의 수동 실행은 건너뛴다. 워크플로는 lint·typecheck·단위·정적 빌드·데스크톱/모바일 Chromium E2E 후 `out/`만 업로드한다. 빌드 실패를 무시하거나 미완료 산출물을 수동 업로드하지 않는다.
+7. **배포 직후**: 실제 HTTPS에서 루트/guide/play 직접 진입·새로고침, JS/CSS/PNG/SVG/WASM 로드, 게임 시작·일시정지·재시작, canonical/OG 이미지 절대 주소, sitemap XML, 잘못된 URL의 404를 확인한다. 루트 robots가 Googlebot/Bingbot/Yeti/OAI-SearchBot와 필요한 게임/스타일 리소스를 차단하지 않는지 확인한다. 프로젝트 하위 robots만 보고 통과 판정하지 않는다.
+8. **검색 등록**: Google Search Console에 최종 URL-prefix 속성을 등록하고 소유 확인 후 `sitemap.xml`을 제출한다. 도메인을 소유한 경우 DNS Domain 속성도 선택 가능하다. URL 검사에서 초기 HTML·색인 가능 여부·Google 선택 canonical을 확인한다. Bing Webmaster Tools와 네이버 서치어드바이저에도 실제 지원 범위에 맞춰 소유 확인·사이트맵 제출을 진행한다. 계정 로그인과 외부 등록은 사용자가 요청한 시점에 수행한다.
+9. **콘텐츠/품질 검증**: Schema.org Validator로 JSON-LD 문법을, Google Rich Results Test로 해당되는 검색 기능만 검사한다. 일반 WebApplication 표기가 전용 리치 결과를 보장하지 않는다. PageSpeed Insights와 실제 모바일에서 LCP/INP/CLS·초기 다운로드·게임 로딩을 측정하고 결과를 남긴다. 게임 리소스 지연 로딩을 유지하며 안내 경로에 물리/렌더러를 추가하지 않는다.
+10. **배포 후 관측**: Search Console의 색인·제외 사유·검색어·노출·클릭·canonical, Bing/네이버 수집 상태를 확인한다. AI 답변의 인용 여부는 직접 관찰하되 등록·노출을 보장하지 않는다. 참가자 이름·사진·토큰을 분석 로그에 보내지 않는다. 실서비스 데이터 없이 검색 순위나 성능 점수를 완료로 기록하지 않는다.
+11. **복구**: 실패한 배포는 재실행 전에 로그를 확인한다. 공개된 오류는 main의 수정 또는 승인된 revert PR을 검증하고 수동 재배포한다. 정상 커밋과 SITE_URL·검증 변수 변경 이력을 함께 남긴다. 도메인 이동 시 옛 주소에서 새 주소로의 리디렉션 가능 여부와 Search Console 이전 절차를 별도로 검토한다. GitHub Pages는 Next의 redirects 설정을 실행하지 않는다.
+
+공식 참고: [GitHub Pages 사용자 워크플로](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [Google Search Console 소유 확인](https://support.google.com/webmasters/answer/9008080), [사이트맵 제출](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [Bing Webmaster Tools](https://www.bing.com/webmasters/), [네이버 서치어드바이저](https://searchadvisor.naver.com/guide/seo-basic-intro). 마지막 확인: 2026-10-24.
 
 ## 12. 완료 판정용 사용자 시나리오
 
