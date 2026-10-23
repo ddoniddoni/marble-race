@@ -1355,3 +1355,14 @@ ego-browser에서 데스크톱과 390×844 화면의 게임·안내를 직접 �
 - 워크플로 파싱 첫 명령은 설치되지 않은 yaml 모듈로 실패했다. 이미 설치된 js-yaml로 동일 파일을 읽어 수동 트리거·build/deploy 구성을 확인했다. 검증을 위해 패키지를 추가하지 않았다.
 - 실제 GitHub Actions/Pages 배포, DNS/HTTPS/루트 robots, 검색 서비스 소유 확인·사이트맵 제출·외부 색인, 온라인 구조화 데이터 검사, PageSpeed/Core Web Vitals, 실제 모바일 기기와 Firefox/WebKit은 미실행이다. 기존 전체 게임 E2E·대규모 레이스 성능도 재실행하지 않았다.
 - 시작 시 있던 next-env.d.ts의 dev 타입 경로 변경은 빌드 후 다시 보존한다. 운영 키/DB, 계정 설정, 의존성 버전과 물리 구현은 변경하지 않았다. 이 결과는 SEO/GEO 사전 준비이며 서비스 전체 출시 완료가 아니다.
+
+
+## 42. 공개 배포 전 Next.js 보안 패치 (2026-10-24)
+
+요청: Git Flow 통합과 실제 GitHub Pages 공개 배포. SEO 변경 b74966b는 PR #3으로 develop에 병합했다(f23ecb1). 최신 develop에서 fix/next-security-release를 생성해 배포 전 경고를 별도 수정했다.
+
+- npm audit에서 Next.js 16.4.0에 critical 1개 패키지(관련 advisory 3개)를 확인했다. 공식 2026-10-14 공지와 npm registry의 호환성·수정 버전을 확인하고 next 및 eslint-config-next를 16.4.3 exact로 고정했다. package-lock을 갱신했으며 React·Pixi·Rapier 버전은 그대로다.
+- 검증: lint·typecheck 성공, 단위 96/96 통과, 서버/Pages 빌드 모두 재시도나 보안 경고 없이 성공, Chromium 충돌 팝 E2E 1/1(31.8초) 및 데스크톱/모바일 Pages E2E 6/6 통과. npm audit --omit=dev는 알려진 취약점 0개다. 이는 검사 시점 의존성 결과이며 서비스 전체 보안 보장이 아니다.
+- npm 설치 시 fsevents·unrs-resolver의 설치 스크립트가 기존 정책으로 차단됐다는 경고가 있었다. 정책을 풀지 않았고 현재 린트·타입·빌드·검사는 정상 동작했다.
+- 이번 PR은 패키지·lockfile·보안 검증 기록만 포함한다. 이후 main 승격 및 Pages 실제 배포 결과는 다음 기록으로 구분한다. 실제 모바일·전체 과거 E2E·대규모 성능은 재실행하지 않았다.
+- 공식 근거: https://nextjs.org/blog/nextjs-security-update-october-14-2026

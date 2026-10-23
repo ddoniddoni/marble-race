@@ -245,7 +245,7 @@ P7 출시 검증을 수행해 줘. 성능, 모바일 플레이, 접근성, 실�
 
 현재는 준비 단계다. 아래 계정 설정·검색 등록·배포·외부 색인은 실행하지 않았다. 구현 파일은 `.github/workflows/pages.yml`, `.env.example`, `next.config.ts`, `src/lib/site.ts`이며 주소·서비스명 변경 시 메타데이터와 안내 본문을 함께 검토한다.
 
-1. **릴리스 준비**: 실제 서비스명과 최종 도메인을 확정한다. 현재 기본 주소는 `https://ddoniddoni.github.io/marble-race/`. 보안 업데이트 경고가 있는 Next.js 16.4.0은 별도 의존성 작업에서 수정·회귀 검증한 뒤 공개 출시한다. 모바일 실제 기기·대규모 인원 성능과 P7 검증을 정적 빌드 통과로 대체하지 않는다.
+1. **릴리스 준비**: 실제 서비스명과 최종 도메인을 확정한다. 현재 기본 주소는 `https://ddoniddoni.github.io/marble-race/`. Next.js 16.4.3 보안 패치와 회귀 검증을 적용했다(PROGRESS 42절). 각 릴리스 시점에도 의존성 보안 점검을 다시 수행한다. 모바일 실제 기기·대규모 인원 성능과 P7 검증을 정적 빌드 통과로 대체하지 않는다.
 2. **주소/검증 값**: 로컬은 `.env.example`을 참고해 공개 설정을 빌드 환경에 제공한다. Actions는 Settings → Secrets and variables → Actions → Variables의 `SITE_URL`을 사용한다. `GOOGLE_SITE_VERIFICATION`, `BING_SITE_VERIFICATION`, `NAVER_SITE_VERIFICATION`은 발급받은 meta content만 입력한다. 전부 공개 확인용 값이며 서버 비밀키가 아니다. 빈 값이면 태그를 생성하지 않는다. 네이버 루트 호스트 소유 확인 제약은 아키텍처 9절을 따른다.
 3. **로컬 검증**: `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, `npm run build:pages`, `npm run test:pages`를 수행한다. 커스텀 도메인을 시험할 때는 빌드와 `test:pages`에 같은 `SITE_URL`을 제공한다. `node scripts/serve-pages.mjs`는 정적 결과를 `http://127.0.0.1:3101/marble-race/`에 띄우는 로컬 확인용이다. `next start`로 정적 export를 확인하지 않는다.
 4. **Git Flow**: 기능 PR은 develop으로 통합한다. 실제 공개 릴리스는 승인된 develop → main 전용 PR로 승격한다. 현재 main이 없으므로 최초 승격은 별도 Git 작업으로 진행한다. 커밋·push·PR·병합·배포는 이 문서만으로 자동 실행하지 않는다.
