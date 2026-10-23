@@ -10,7 +10,7 @@ function neonCourse(variant: number) {
   const objects: MapObject[] = [];
   const pendingPins: { x: number; y: number; radius: number; color: string }[] = [];
   const base = (x: number, y: number, rotation = 0, color = "#E8FFFF") => ({
-    id: `${String(43 + variant).padStart(8, "0")}-0000-4000-8000-${String(objects.length + 1).padStart(12, "0")}`,
+    id: `${String(49 + variant).padStart(8, "0")}-0000-4000-8000-${String(objects.length + 1).padStart(12, "0")}`,
     transform: { x, y, rotation }, color,
   });
   const wall = (x: number, y: number, width: number, height: number, rotation = 0) =>
@@ -209,7 +209,8 @@ function neonCourse(variant: number) {
   // Evaluate pins only after all walls and moving envelopes are known.
   for (const pin of pendingPins) placePin(pin);
   return canonicalizeMap({
-    schemaVersion: 1, physicsProfile: "arcade-flow-v1", finishPace: "dramatic-v1", finishAir: "pulse-v2",
+    schemaVersion: 1, physicsProfile: "arcade-flow-v1", finishPace: "dramatic-v1", finishAir: false,
+    collisionPop: { version: "random-v1", startY: stretchY(72) },
     world: {width:24,height:146}, theme:"night",
     spawn:{x:1.78,y:1.28,width:20.39,height:3.64},
     finish:{left:11.2,right:12.8,y:stretchY(94)}, objects,
@@ -217,7 +218,7 @@ function neonCourse(variant: number) {
 }
 const stages = (titles: readonly string[]) => titles.map((title, index) => ({y:stretchY(12 + index * 20),title}));
 export const TEMPLATES: readonly Template[] = [
-  {id:"silk-zigzag-v15",title:"네온 드리프트",subtitle:"NEON DRIFT",description:"교차 스위퍼 → 왕복 빗장 → 사각 회전체 · 엇갈린 3단 게이트 · 감속 구간 · 에어 팝 · 오른쪽 축 결승 게이트",difficulty:"보통",supportedParticipants:{min:2,max:LIMITS.participants},stages:stages(["교차 스위퍼","왕복 빗장","사각 회전체","삼중 회전 결승"]),map:neonCourse(0)},
-  {id:"bloom-bumper-v15",title:"버블 캐스케이드",subtitle:"BUBBLE CASCADE",description:"사각 회전체 → 교차 스위퍼 → 왕복 빗장 · 연속 충돌 · 감속 구간 · 에어 팝 · 오른쪽 축 결승 게이트",difficulty:"도전",supportedParticipants:{min:2,max:LIMITS.participants},stages:stages(["사각 회전체","교차 스위퍼","왕복 빗장","마지막 팝핀"]),map:neonCourse(1)},
-  {id:"orbit-rotor-v15",title:"오비트 러시",subtitle:"ORBIT RUSH",description:"왕복 빗장 → 사각 회전체 → 교차 스위퍼 · 좌우 교차 출구 · 감속 구간 · 에어 팝 · 오른쪽 축 결승 게이트",difficulty:"도전",supportedParticipants:{min:2,max:LIMITS.participants},stages:stages(["왕복 빗장","사각 회전체","교차 스위퍼","더블 오비트"]),map:neonCourse(2)},
+  {id:"silk-zigzag-v17",title:"네온 드리프트",subtitle:"NEON DRIFT",description:"교차 스위퍼 → 왕복 빗장 → 사각 회전체 · 엇갈린 3단 게이트 · 마지막 구역 랜덤 충돌 팝 · 감속 구간 · 오른쪽 축 결승 게이트",difficulty:"보통",supportedParticipants:{min:2,max:LIMITS.participants},stages:stages(["교차 스위퍼","왕복 빗장","사각 회전체","삼중 회전 결승"]),map:neonCourse(0)},
+  {id:"bloom-bumper-v17",title:"버블 캐스케이드",subtitle:"BUBBLE CASCADE",description:"사각 회전체 → 교차 스위퍼 → 왕복 빗장 · 연속 충돌 · 마지막 구역 랜덤 충돌 팝 · 감속 구간 · 오른쪽 축 결승 게이트",difficulty:"도전",supportedParticipants:{min:2,max:LIMITS.participants},stages:stages(["사각 회전체","교차 스위퍼","왕복 빗장","마지막 팝핀"]),map:neonCourse(1)},
+  {id:"orbit-rotor-v17",title:"오비트 러시",subtitle:"ORBIT RUSH",description:"왕복 빗장 → 사각 회전체 → 교차 스위퍼 · 좌우 교차 출구 · 마지막 구역 랜덤 충돌 팝 · 감속 구간 · 오른쪽 축 결승 게이트",difficulty:"도전",supportedParticipants:{min:2,max:LIMITS.participants},stages:stages(["왕복 빗장","사각 회전체","교차 스위퍼","더블 오비트"]),map:neonCourse(2)},
 ];

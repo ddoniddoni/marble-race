@@ -24,7 +24,7 @@ export const FINISH_AIR_STRONG = {
   recoverTicks: 24,
 } as const;
 export type FinishAirProfile = typeof FINISH_AIR | typeof FINISH_AIR_STRONG;
-export function finishAirProfile(version: NonNullable<Scene["finishAir"]> = "pulse-v1"): FinishAirProfile {
+export function finishAirProfile(version: Exclude<Scene["finishAir"], false | undefined> = "pulse-v1"): FinishAirProfile {
   return version === "pulse-v2" ? FINISH_AIR_STRONG : FINISH_AIR;
 }
 

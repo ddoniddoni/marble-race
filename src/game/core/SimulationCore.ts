@@ -15,6 +15,7 @@ export class SimulationCore {
   get marbleStates() { return this.physics.marbleStates; }
   retireMarbles(indices: readonly number[]) { this.physics.retireMarbles?.(indices); }
   get flowStats() { return this.physics.flowStats ?? null; }
+  get collisionBursts() { return this.physics.collisionBursts; }
   get airBurst() { return this.physics.airBurst; }
   get impacts() {
     return this.physics.impacts;

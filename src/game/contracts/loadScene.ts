@@ -10,6 +10,7 @@ export function loadMapScene(input: unknown, count: number, id: string) {
     physicsProfile: map.physicsProfile,
     finishPace: map.finishPace,
     finishAir: map.finishAir,
+    collisionPop: map.collisionPop,
     width: map.world.width,
     height: map.world.height,
     theme: map.theme,

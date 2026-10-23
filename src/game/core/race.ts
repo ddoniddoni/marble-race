@@ -1,6 +1,6 @@
 import { FIXED_DT, type Pose, type Scene } from "./types";
 
-// mulberry32-v1. Only initialization consumes randomness; physics ticks never do.
+// mulberry32-v1 for start assignment. Collision charges use a separate seed-derived stream.
 export function shuffledStart(scene: Scene, seed: number, count: number, slots: readonly { x: number; y: number }[], compact = false): Scene {
   let state = seed >>> 0;
   const uint32 = () => {
@@ -30,6 +30,7 @@ export function shuffledStart(scene: Scene, seed: number, count: number, slots: 
   if (available.length < count) throw new Error("모든 구슬이 함께 출발할 슬롯이 부족합니다.");
   return {
     ...scene,
+    raceSeed: seed >>> 0,
     spawnSlots: shuffled.slice(0, count),
     initialVelocities: Array.from({ length: count }, () => ({
       x: (uint32() / 0x100000000 - 0.5) * 2.6,

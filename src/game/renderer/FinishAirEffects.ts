@@ -14,7 +14,7 @@ export class FinishAirEffects {
   private readonly strong: boolean;
   private lastTick = -1;
   private lastBurstTick = -1;
-  constructor(finish: NonNullable<Scene["finish"]>, version: NonNullable<Scene["finishAir"]> = "pulse-v1") {
+  constructor(finish: NonNullable<Scene["finish"]>, version: Exclude<Scene["finishAir"], false | undefined> = "pulse-v1") {
     this.strong = version === "pulse-v2";
     if (this.strong) {
       this.caption.style.fontSize = 60;

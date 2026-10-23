@@ -60,7 +60,8 @@ const MapShape = z.strictObject({
   schemaVersion: z.literal(1),
   physicsProfile: z.enum(["classic-v1", "arcade-flow-v1"]),
   finishPace: z.literal("dramatic-v1").optional(),
-  finishAir: z.enum(["pulse-v1", "pulse-v2"]).optional(),
+  finishAir: z.union([z.enum(["pulse-v1", "pulse-v2"]), z.literal(false)]).optional(),
+  collisionPop: z.strictObject({ version: z.literal("random-v1"), startY: finite }).optional(),
   world: z.strictObject({
     width: finite.min(8).max(40),
     height: finite.min(10).max(150),
@@ -86,6 +87,12 @@ export const MapDocumentSchema = MapShape.superRefine((map, ctx) => {
     ctx.addIssue({ code: "custom", path: ["finishAir"],
       message: "결승 에어 팝은 arcade-flow-v1 코스에서만 사용할 수 있습니다.",
       params: { reason: "finish_air_profile" } });
+  if (map.collisionPop) {
+    if (map.physicsProfile !== "arcade-flow-v1")
+      ctx.addIssue({ code: "custom", path: ["collisionPop"], message: "충돌 팝은 arcade-flow-v1 코스에서만 사용할 수 있습니다." });
+    if (map.collisionPop.startY <= map.spawn.y + map.spawn.height || map.collisionPop.startY >= map.finish.y)
+      ctx.addIssue({ code: "custom", path: ["collisionPop", "startY"], message: "충돌 팝 시작은 출발 구역 아래, 결승선 위여야 합니다." });
+  }
   const ids = new Set<string>();
   let moving = 0;
   map.objects.forEach((object, index) => {
