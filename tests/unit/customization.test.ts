@@ -47,14 +47,14 @@ it("supports 2 through 10000 participants and generates numeric labels", () => {
   ])
     expect(() => numberedNames(start!, count!)).toThrow();
 });
-it("preserves all v1 map hash vectors and exposes the current v15 courses", async () => {
+it("preserves all v1 map hash vectors and exposes the current v17 courses", async () => {
   expect(await Promise.all(LEGACY.map((t) => hashMap(t.map)))).toEqual([
     "4534b56ecea4d42e3b764b40ef43d288aabcf0fa6cad1c0ffcfd0a61d06403ce",
     "92cd5d9f5d7e91693a734dd9af22442ef591a0f85b602d75b00f74b249e38786",
     "17d826294d4fb0f5aa9a4a327c32ccd574d7384db332a6b1be8d47bfc28b9d72",
   ]);
   expect(
-    TEMPLATES.every((t) => t.id.endsWith("v15") && t.map.world.height === 146 && t.map.finishAir === "pulse-v2"),
+    TEMPLATES.every((t) => t.id.endsWith("v17") && t.map.world.height === 146 && t.map.finishAir === false),
   ).toBe(true);
 });
 describe("presentation camera", () => {

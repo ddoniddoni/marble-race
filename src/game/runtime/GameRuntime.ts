@@ -122,6 +122,8 @@ export class GameRuntime {
   private lastLeadCue = -3000;
   private finishAnnounced = false;
   private lastAirCueTick = -1;
+  private lastPopCueTick = -60;
+  private lastPopId = 0;
   private readonly scene;
   private readonly map;
   private participantNames: readonly string[];
@@ -341,7 +343,8 @@ export class GameRuntime {
     return leader;
   }
   private isFinalStretch() {
-    if (!this.race || this.scene.finishAir || this.count > 200 || this.race.completed > 0) return false;
+    // An explicit false disables air effects without restoring legacy slow motion.
+    if (!this.race || this.scene.finishAir !== undefined || this.count > 200 || this.race.completed > 0) return false;
     const leader = this.liveLeader();
     return leader >= 0 && this.core.poses[leader]!.y >= this.scene.finish!.y - 5;
   }
@@ -409,6 +412,16 @@ export class GameRuntime {
       this.renderer.setImpacts(this.core.impacts, this.core.tick);
       const airBurst = this.core.airBurst;
       this.renderer.setAirBurst(airBurst);
+      const collisionBursts = this.core.collisionBursts;
+      this.renderer.setCollisionBursts(collisionBursts);
+      const pop = collisionBursts?.at(-1);
+      if (pop && pop.id > this.lastPopId) {
+        this.lastPopId = pop.id;
+        if (running && pop.tick - this.lastPopCueTick >= 8) {
+          this.lastPopCueTick = pop.tick;
+          this.audio.puff();
+        }
+      }
       if (airBurst && airBurst.tick > this.lastAirCueTick) {
         this.lastAirCueTick = airBurst.tick;
         if (running) this.audio.puff(this.scene.finishAir === "pulse-v2");
@@ -499,6 +512,9 @@ export class GameRuntime {
     this.lastLeadCue = -3000;
     this.finishAnnounced = false;
     this.lastAirCueTick = -1;
+    this.lastPopCueTick = -60;
+    this.lastPopId = 0;
+    this.renderer.setCollisionBursts(undefined);
     this.renderer.setAirBurst(undefined);
     this.renderer.resetCamera();
     this.renderer.setRaceFocus(null, [], false);
@@ -598,7 +614,9 @@ export class GameRuntime {
       : this.scene.physicsProfile === "arcade-flow-v1"
         ? (this.scene.startLayout ? "arcade-flow-expanded-start-benchmark-v1" : "arcade-flow-benchmark-v2")
         : "p0-fixed-v1";
-    const ruleVersion = this.scene.finishAir === "pulse-v2"
+    const ruleVersion = this.scene.finishAir === false
+      ? `${simulationVersion}.finish-air-off-v1`
+      : this.scene.finishAir === "pulse-v2"
       ? (this.race ? "arcade-flow-all-finish-air-v2"
         : this.scene.startLayout ? "arcade-flow-expanded-air-benchmark-v2" : "arcade-flow-air-benchmark-v2")
       : this.scene.finishAir === "pulse-v1"
@@ -617,8 +635,10 @@ export class GameRuntime {
       tickerStarted: this.renderer.tickerStarted,
       participantNames: [...this.participantNames],
       simulationVersion: this.scene.physicsProfile === "arcade-flow-v1"
-        ? `${ruleVersion}.${ARCADE_MARBLE_CONTACTS.version}` : ruleVersion,
+        ? `${ruleVersion}.${ARCADE_MARBLE_CONTACTS.version}${this.scene.collisionPop ? ".collision-pop-random-v1" : ""}` : ruleVersion,
       marbleContacts: true,
+      collisionPop: this.scene.collisionPop ?? null,
+      collisionBursts: this.core.collisionBursts ?? [],
       finishPace: this.scene.finishPace && this.scene.finish ? {
         ...FINISH_PACE, startY: this.scene.finish.y - FINISH_PACE.approachDistance,
         fullY: this.scene.finish.y - FINISH_PACE.fullDistance,

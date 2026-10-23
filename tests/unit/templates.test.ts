@@ -72,6 +72,36 @@ it.each(
     );
   },
 );
+it.each([false, undefined, "pulse-v1", "pulse-v2"] as const)(
+  "finish air %s: explicit off falls through while legacy pulses still lift",
+  (finishAir) => {
+    const scene = loadMapScene(TEMPLATES[0]!.map, 2, "finish-air-regression").scene;
+    const world = new RapierPhysics(2, {
+      ...scene,
+      finishAir,
+      obstacles: [],
+      spawnSlots: [{ x: 11.6, y: scene.finish!.y - 4 }, { x: 12.4, y: scene.finish!.y - 4 }],
+    });
+    worlds.push(world);
+    const race = new AllFinishRace(2, world.scene.finish!, world.scene);
+    let rose = false;
+    for (let tick = 1; tick <= 300; tick++) {
+      world.step(tick);
+      rose ||= world.poses.some((pose, index) => pose.y < world.previous[index]!.y - 0.00001);
+      race.step(tick, world.previous, world.poses, world.marbleStates);
+      world.retireMarbles(race.newlySettled);
+    }
+    if (finishAir) {
+      expect(rose).toBe(true);
+      expect(world.flowStats?.airLifts).toBe(2);
+    } else {
+      expect(rose).toBe(false);
+      expect(world.airBurst).toBeUndefined();
+      expect(race.completed).toBe(2);
+      expect(race.dnf).toBe(0);
+    }
+  },
+);
 it("object input order produces identical body order and physics; source is not mutated", () => {
   const map = structuredClone(TEMPLATES[2]!.map);
   const original = structuredClone(map);

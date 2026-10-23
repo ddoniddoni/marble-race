@@ -1,6 +1,7 @@
 import { LIMITS } from "../contracts/schemas";
 import { platformPosition } from "../core/motion";
 import type { Obstacle } from "../core/types";
+import { CollisionPop } from "./CollisionPop";
 import { ArcadeFlow } from "./ArcadeFlow";
 import RAPIER from "@dimforge/rapier2d-compat";
 import {
@@ -39,10 +40,13 @@ export function initPhysics() {
 export class RapierPhysics implements PhysicsAdapter {
   private world: RAPIER.World | null;
   private readonly flow: ArcadeFlow | null;
+  private collisionPop: CollisionPop | null = null;
+  get collisionBursts() { return this.collisionPop?.bursts; }
   private readonly marbleColliders: RAPIER.Collider[] = [];
   get impacts() { return this.flow?.impacts; }
   get airBurst() { return this.flow?.airBurst; }
   get flowStats() { return this.flow ? { kicks: this.flow.kicks, assists: this.flow.assists,
+    ...(this.collisionPop ? { collisionPops: this.collisionPop.total } : {}),
     ...(this.scene.finishAir ? { airBursts: this.flow.airBursts, airLifts: this.flow.airLifts } : {}),
   } : null; }
   private readonly marbles: RAPIER.RigidBody[] = [];
@@ -154,6 +158,9 @@ export class RapierPhysics implements PhysicsAdapter {
       this.world = null;
       throw error;
     }
+    if (arcade && scene.collisionPop && scene.finish)
+      this.collisionPop = new CollisionPop(marbleCount, scene.collisionPop.startY, scene.finish.y,
+        scene.raceSeed ?? 0, this.marbleColliders);
     this.total = world.bodies.len();
     physicsResources.worlds++;
     physicsResources.bodies += this.total;
@@ -175,6 +182,8 @@ export class RapierPhysics implements PhysicsAdapter {
         else body.setNextKinematicRotation(object.rotation + object.speed * sampleTick * FIXED_DT);
       }
       this.world.step();
+      this.collisionPop?.step(this.world, this.marbles, this.marbleColliders, this.marbleStates, tick,
+        (index, y) => this.flow?.restartProgress(index, y, tick));
     }
     this.flow?.step(this.world, this.marbles, this.marbleColliders, tick, this.marbleStates);
     for (let i = 0; i < this.poses.length; i++) {
@@ -217,6 +226,8 @@ export class RapierPhysics implements PhysicsAdapter {
     this.world.free();
     this.world = null;
     this.flow?.dispose();
+    this.collisionPop?.dispose();
+    this.collisionPop = null;
     this.marbleColliders.length = 0;
     this.marbles.length = 0;
     this.mechanisms.length = 0;

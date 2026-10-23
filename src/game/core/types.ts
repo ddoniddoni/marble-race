@@ -18,7 +18,9 @@ export type Obstacle = {
 export type Scene = {
   physicsProfile?: "classic-v1" | "arcade-flow-v1";
   finishPace?: "dramatic-v1";
-  finishAir?: "pulse-v1" | "pulse-v2";
+  finishAir?: "pulse-v1" | "pulse-v2" | false;
+  collisionPop?: { version: "random-v1"; startY: number };
+  raceSeed?: number;
   stages?: readonly { y: number; title: string }[];
   id: string;
   width: number;
@@ -37,10 +39,13 @@ export type Scene = {
 };
 export type Pose = { x: number; y: number; rotation: number };
 export type AirBurst = { tick: number; x: number; y: number; count: number };
+export type CollisionBurst = { id: number; tick: number; x: number; y: number;
+  a: number; b: number; impulse: number; nx: number; ny: number };
 export interface PhysicsAdapter {
+  readonly collisionBursts?: readonly CollisionBurst[];
   readonly airBurst?: AirBurst;
   readonly impacts?: ReadonlyMap<string, number>;
-  readonly flowStats?: { kicks: number; assists: number; airBursts?: number; airLifts?: number } | null;
+  readonly flowStats?: { kicks: number; assists: number; airBursts?: number; airLifts?: number; collisionPops?: number } | null;
   readonly marbleCount: number;
   readonly marbleStates?: Uint8Array;
   retireMarbles?(indices: readonly number[]): void;

@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Sprite, Text } from "pixi.js";
-import { PROFILE, type AirBurst, type Pose, type Scene } from "../core/types";
+import { PROFILE, type AirBurst, type CollisionBurst, type Pose, type Scene } from "../core/types";
 
 import {
   CAMERA_ZOOM, cameraFrame, cameraFromTransform, overviewCameraFrame, startCameraFrame,
@@ -7,6 +7,7 @@ import {
 } from "./camera";
 import { CourseMinimap } from "./CourseMinimap";
 import { MarbleArt } from "./MarbleArt";
+import { CollisionPopEffects } from "./CollisionPopEffects";
 import { FinishAirEffects } from "./FinishAirEffects";
 
 const COLORS = [0xff687b, 0xffd45e, 0x8ff07a, 0x66e8f1, 0xa78bfa, 0xf67cde];
@@ -18,6 +19,9 @@ export class PixiRenderer {
   private readonly raceEffects = new Graphics();
   private finishAirEffects: FinishAirEffects | null = null;
   private airBurst: AirBurst | undefined;
+  private collisionPopEffects: CollisionPopEffects | null = null;
+  private collisionBursts: readonly CollisionBurst[] = [];
+  setCollisionBursts(bursts: readonly CollisionBurst[] | undefined) { this.collisionBursts = bursts ?? []; }
   setAirBurst(burst: AirBurst | undefined) { this.airBurst = burst; }
   private leaderIndex: number | null = null;
   private winnerIndices: readonly number[] = [];
@@ -377,6 +381,10 @@ export class PixiRenderer {
         shape.rotation = obstacle.rotation;
         this.root.addChild(shape);
       }
+      if (scene.collisionPop) {
+        this.collisionPopEffects = new CollisionPopEffects();
+        this.root.addChild(this.collisionPopEffects.root);
+      }
       this.raceEffects.scale.set(0.01);
       this.root.addChild(this.raceEffects);
       // Six shared glossy skins; unique names share framed atlas textures.
@@ -482,6 +490,7 @@ export class PixiRenderer {
       light.halo.alpha = 0.18 + energy * 0.72;
       light.halo.scale.set(light.baseScale * (1 + (this.reducedMotion ? 0 : energy * 0.35)));
     }
+    this.collisionPopEffects?.render(this.collisionBursts, this.simulationTick, this.reducedMotion);
     this.finishAirEffects?.render(this.airBurst, this.simulationTick, this.reducedMotion);
     this.raceEffects.clear();
     for (let i = 0; i < this.count; i++) {
@@ -601,6 +610,8 @@ export class PixiRenderer {
     this.impactTicks = undefined;
     this.airBurst = undefined;
     this.finishAirEffects = null;
+    this.collisionPopEffects = null;
+    this.collisionBursts = [];
     this.minimap = null;
     this.narrowGates.length = 0;
     this.startFrame = null;

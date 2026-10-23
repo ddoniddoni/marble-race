@@ -51,6 +51,7 @@ export function expandedStart(scene: Scene, count: number): Scene {
   return { ...scene, width: worldWidth, height: scene.height + offset.y, obstacles,
     spawnSlots: slots, finish: scene.finish ? { left: scene.finish.left + offset.x,
       right: scene.finish.right + offset.x, y: scene.finish.y + offset.y } : undefined,
+    collisionPop: scene.collisionPop ? { ...scene.collisionPop, startY: scene.collisionPop.startY + offset.y } : undefined,
     stages: scene.stages?.map((stage) => ({ ...stage, y: stage.y + offset.y })),
     startLayout: { version: "expanded-start-v1", columns, rows, spacing, bounds, courseOffset: offset },
   };

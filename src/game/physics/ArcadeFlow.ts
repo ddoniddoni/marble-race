@@ -24,7 +24,7 @@ export class ArcadeFlow {
   assists = 0;
   constructor(count: number, private readonly width: number, private readonly finishY?: number,
     airFinish?: NonNullable<Scene["finish"]>, airVersion?: Scene["finishAir"]) {
-    this.airProfile = finishAirProfile(airVersion);
+    this.airProfile = finishAirProfile(airVersion || undefined);
     this.lastAirTick = -this.airProfile.cooldownTicks;
     this.airZone = airFinish ? finishAirZone(airFinish, this.airProfile) : undefined;
     this.airLiftTicks = new Int32Array(airFinish ? count : 0).fill(-1);
@@ -44,6 +44,9 @@ export class ArcadeFlow {
       marbles[index]!.setLinearDamping(damping);
       this.damping[index] = damping;
     }
+  }
+  restartProgress(index: number, y: number, tick: number) {
+    this.progress[index] = { y, tick };
   }
   register(object: Obstacle, collider: Collider, order: number) {
     if (object.kind !== "wall") this.kickers.set(collider.handle, { object, collider, order });
