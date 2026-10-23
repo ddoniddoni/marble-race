@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Snapshot, RaceSnapshot } from "@/game/runtime/GameRuntime";
 const colors = ["#ff687b", "#ffd45e", "#8ff07a", "#66e8f1", "#a78bfa", "#f67cde"];
-const ROW_HEIGHT = 42;
+const ROW_HEIGHT = 52;
 
 function Standings({ race, total, finished }: { race: RaceSnapshot; total: number; finished: boolean }) {
   const viewport = useRef<HTMLDivElement>(null);
