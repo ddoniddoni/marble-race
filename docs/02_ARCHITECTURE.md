@@ -197,7 +197,7 @@ CI 명령은 `lint`, `typecheck`, `test`, `build`, 필요한 `test:e2e`, `test:d
 
 ### 현재 배포 결정과 서버 기능의 경계
 
-사용자 요청에 따라 현재 로컬 게임은 GitHub Pages 정적 사이트로 배포하도록 준비한다. 기본 주소는 `https://ddoniddoni.github.io/marble-race/`이며 아직 실제 배포한 주소가 아니다. `SITE_URL` 하나에서 canonical, OG URL, sitemap과 Pages `basePath`를 만든다. 별도 도메인이 정해지면 이 값을 바꾸고 다시 빌드한다. 공식 서비스명은 미정이므로 현재 화면의 ‘구슬 유원지 / MARBLE RUN’을 사용한다.
+사용자 요청에 따라 현재 로컬 게임은 GitHub Pages 정적 사이트로 배포하도록 준비한다. 공개 주소는 `https://ddoniddoni.github.io/marble-race/`이며 2026-10-24 첫 GitHub Actions 배포와 실사이트 확인을 완료했다(PROGRESS 43절). `SITE_URL` 하나에서 canonical, OG URL, sitemap과 Pages `basePath`를 만든다. 별도 도메인이 정해지면 이 값을 바꾸고 다시 빌드한다. 공식 서비스명은 미정이므로 현재 화면의 ‘구슬 유원지 / MARBLE RUN’을 사용한다.
 
 `npm run build`는 기존 Next 서버 빌드를 유지한다. `npm run build:pages`는 `output: export`, `trailingSlash: true`, `out/` 산출물을 생성한다. 두 빌드는 `.next`를 공유하므로 서버 빌드와 정적 빌드를 동시에 실행하지 않는다. `/marble-race/guide/`를 직접 열거나 새로고침해도 대응하는 `guide/index.html`이 제공된다. `next/link`가 하위 경로를 처리하고 정적 이미지 경로도 같은 주소를 따른다. `out/`과 빌드 캐시는 Git에 넣지 않는다.
 
