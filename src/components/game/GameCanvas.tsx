@@ -103,6 +103,7 @@ export default function GameCanvas() {
             구슬 유원지<small>MARBLE RUN</small>
           </span>
         </Link>
+        <a className="game-help-link" href="#about">이용 안내 ↓</a>
       </header>
       <LabSession
         attempt={attempt}

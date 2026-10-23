@@ -17,7 +17,7 @@
 | 백엔드 | Supabase Auth, Postgres, Storage | 사용자, 게시 버전, 스킨, 공유 데이터 |
 | 이미지 처리 | 서버 Node.js 런타임의 Sharp | 입력 검사, 크롭, 작은 래스터 이미지로 재인코딩 |
 | 테스트 | Vitest, Playwright, Supabase DB 테스트 | 도메인, 브라우저 흐름, 접근 제어 |
-| 배포 | Vercel + Supabase | 웹과 데이터 분리. 운영 플랜은 별도 검토 |
+| 배포 | 현재 정적 게임: GitHub Pages. 서버 기능: 별도 런타임 + Supabase 예정 | Pages에는 HTML/CSS/JS만 배포한다. P5~P6 서버 경계는 아래 9절에 따라 재설계 후 구현 |
 
 위 조합은 추천 설계이며 가장 빠르다는 벤치마크 결론이 아니다. P0에서 실제 프로젝트와 브라우저에서 확인한다. Rapier의 compat 패키지는 WASM을 JS 안에 포함하는 대가로 초기 전송량 부담이 있으므로 게임 경로에서만 지연 로드한다. 추후 일반 WASM 패키지로 바꿀 때는 번들 출력, CSP, 로딩 실패, 재현성 테스트를 다시 수행한다. [A1]
 
@@ -192,6 +192,62 @@ Worker 도입 여부는 근거와 함께 PROGRESS의 기술 결정에 기록한�
 오류 로그에는 engine init 실패, 맵 검증 코드, permission failure, 저장 충돌, DB/Storage 실패, renderer context loss를 기록한다. 참가자 이름과 사진 URL, 전체 맵 초안, 인증 토큰, 공유 토큰은 기본 로그에서 제외한다.
 
 CI 명령은 `lint`, `typecheck`, `test`, `build`, 필요한 `test:e2e`, `test:db`다. 각 스크립트는 실제 도구를 실행해야 한다. 빈 테스트나 `echo passed`로 통과시키지 않는다. Supabase 로컬 통합 테스트에 필요한 Docker가 없는 환경은 미실행 사유를 기록한다.
+
+## 9. GitHub Pages와 검색 준비 (2026-10-24)
+
+### 현재 배포 결정과 서버 기능의 경계
+
+사용자 요청에 따라 현재 로컬 게임은 GitHub Pages 정적 사이트로 배포하도록 준비한다. 기본 주소는 `https://ddoniddoni.github.io/marble-race/`이며 아직 실제 배포한 주소가 아니다. `SITE_URL` 하나에서 canonical, OG URL, sitemap과 Pages `basePath`를 만든다. 별도 도메인이 정해지면 이 값을 바꾸고 다시 빌드한다. 공식 서비스명은 미정이므로 현재 화면의 ‘구슬 유원지 / MARBLE RUN’을 사용한다.
+
+`npm run build`는 기존 Next 서버 빌드를 유지한다. `npm run build:pages`는 `output: export`, `trailingSlash: true`, `out/` 산출물을 생성한다. 두 빌드는 `.next`를 공유하므로 서버 빌드와 정적 빌드를 동시에 실행하지 않는다. `/marble-race/guide/`를 직접 열거나 새로고침해도 대응하는 `guide/index.html`이 제공된다. `next/link`가 하위 경로를 처리하고 정적 이미지 경로도 같은 주소를 따른다. `out/`과 빌드 캐시는 Git에 넣지 않는다.
+
+GitHub Pages에서는 요청 시 실행하는 Next Route Handler, Server Action, 쿠키 인증, ISR, 기본 서버 이미지 최적화와 런타임 동적 경로를 사용할 수 없다. 현재 게임과 빌드 시 생성하는 안내·메타데이터에는 서버가 필요 없다. [A5]
+
+| 이후 기능 | Pages 배포에서 필요한 결정 |
+|---|---|
+| 로컬 코스 편집·꾸미기 | 브라우저에서 구현 가능. P3~P4 범위와 기존 검증 유지 |
+| 로그인·클라우드 저장·이미지 처리 | P5 전에 외부 API/함수와 인증 흐름을 설계한다. 현재 Next 서버 예제를 Pages에 그대로 배포하지 않는다 |
+| 공개 맵 상세와 공유 미리보기 | 동적으로 게시되는 콘텐츠는 요청 시 HTML을 만드는 별도 호스트 또는 공개 버전만 검증해 재빌드하는 게시 파이프라인이 필요 |
+| 링크 전용·비공개 콘텐츠 | 정적 산출물, sitemap, JSON-LD, OG에 포함하지 않는다. 접근 권한 검사는 서버/DB가 수행해야 하며 noindex는 권한 검사를 대신하지 않음 |
+| 상업 서비스로 확장 | GitHub Pages 이용 범위·대역폭과 호스팅 정책을 다시 검토하고 필요한 경우 서버 호스팅으로 이동 [A6] |
+
+향후 경로를 모두 `generateStaticParams`로 내보내거나 미리 알 수 없는 링크를 SPA 404 우회로 처리하는 방식으로 권한·검색 문제를 덮지 않는다. 기존 아키텍처의 ‘Next.js 서버’ 부분은 미래 서버 배포 계획이며 현재 Pages 산출물에 포함되지 않는다. 인증·DB·업로드는 이번 작업에 구현하지 않았다.
+
+### 검색엔진이 읽는 실제 콘텐츠
+
+- `/`: 바로 실행되는 전체 화면 게임을 유지한다. 화면 아래에 H1, 서비스 설명, 사용 방법 요약과 `/guide/` 링크를 정적 HTML로 제공한다. 게임 헤더의 ‘이용 안내’에서 이동할 수 있다. 봇 전용 숨김 문구나 키워드 나열을 넣지 않는다.
+- `/guide/`: 입력 예시, 코스 선택, 일시정지·재시작, 순위와 실제 질문에 대한 답변을 정적 HTML로 제공한다. 현재 미지원인 편집·계정 저장·게시·결과 공유도 명시한다. 기능이 바뀔 때 본문과 수정일을 함께 갱신한다.
+- `/play/`: 기존 호환 경로로 같은 화면을 제공하고 canonical은 `/`로 통일한다. sitemap에는 대표 페이지 `/`, `/guide/`만 포함한다. canonical은 검색엔진에 전달하는 신호이며 선택을 강제하지 않는다.
+- 페이지별 title/description/canonical, 한국어 lang, Open Graph, Twitter 카드, 1200×630 PNG와 SVG 아이콘을 제공한다. 개인 참가자 이름·결과를 정적 메타데이터에 넣지 않는다.
+- 루트의 `WebApplication` JSON-LD는 현재 보이는 서비스 이름·설명·주소·무료 이용 범위와 일치시킨다. 가짜 평점·리뷰·사용자 수, 미구현 기능과 과장된 추첨 공정성을 넣지 않는다. 구조화 데이터가 있다고 리치 결과를 보장하지 않는다.
+- sitemap의 `lastModified`를 매 빌드 시각으로 조작하지 않는다. 공개 페이지가 늘면 canonical 기준으로 sitemap과 내부 링크를 함께 확장한다.
+
+### GEO: AI 검색에서 이해할 수 있는 정보
+
+GEO는 여기서 AI 검색/답변 엔진이 내용을 이해하고 출처로 참조할 수 있도록 준비하는 것을 뜻한다. 질문에 바로 답하는 한국어 설명, 명확한 서비스명, 실제 기능·제약, 수정일과 크롤링 가능한 내부 링크를 유지한다. 검색봇에게 JavaScript 게임 실행이나 회원가입을 요구하지 않는다.
+
+Google의 AI Overviews/AI Mode는 별도 ‘AI 전용 SEO’나 특수 schema, AI 텍스트 파일을 요구하지 않는다. 따라서 `llms.txt`를 필수 조건처럼 만들지 않고 실제 HTML과 일반 검색 기반을 우선한다. 접근·색인이 가능해도 노출·순위·AI 인용은 보장되지 않는다. [A7]
+
+ChatGPT 검색용 `OAI-SearchBot`과 모델 학습용 `GPTBot`은 별도 제어다. 현재 일반 허용 규칙은 검색봇을 차단하지 않는다. 추후 학습용 봇 정책을 바꿀 때 검색봇까지 함께 막지 않도록 구분한다. 루트 robots와 호스트 접근 정책이 실제 효력을 가지며 이 프로젝트의 하위 robots 파일만으로 계정 전체 정책을 바꾸지 않는다. [A8]
+
+### github.io 하위 주소의 주의점
+
+`https://ddoniddoni.github.io/marble-race/robots.txt`는 호스트 루트가 아니므로 크롤러 제어 파일로 효력이 없다. 생성된 내용은 루트 도메인 배포 때 바로 사용하거나 계정 사이트 `ddoniddoni.github.io` 저장소의 `/robots.txt`에 필요한 내용을 합치는 템플릿이다. 다른 프로젝트의 규칙을 덮어쓰지 않는다. 루트 파일이 없다면 일반적으로 크롤링은 허용되며 이 때문에 하위 사이트가 자동 차단되는 것은 아니다. 사이트맵은 Search Console에 직접 제출할 수 있다. [A9]
+
+네이버 서치어드바이저는 호스트 단위 등록만 지원하므로 `/marble-race/`만으로 소유 확인을 끝낼 수 없다. 계정 루트 사이트의 HTML/meta에 소유 확인을 배치하거나 별도 도메인을 연결해야 한다. 프로젝트의 `NAVER_SITE_VERIFICATION`만 채웠다고 등록 완료로 보지 않는다. [A10]
+
+검색 주소를 오래 유지하려면 출시 전에 최종 도메인을 결정하는 편이 좋다. 별도 도메인에서는 `SITE_URL=https://도메인/`으로 변경하고 Pages의 도메인·DNS·HTTPS 설정도 별도로 완료한다. 설정 변경만으로 DNS나 HTTPS가 구성되지는 않는다.
+
+### 출처와 확인일
+
+아래 공식 문서를 2026-10-24 확인했다. 배포 시점에 변경된 제한은 다시 확인한다.
+
+- [A5] Next.js 정적 내보내기와 지원하지 않는 기능: https://nextjs.org/docs/app/guides/static-exports
+- [A6] GitHub Pages 이용 범위와 제한: https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
+- [A7] Google AI 검색 기능과 웹사이트: https://developers.google.com/search/docs/appearance/ai-features
+- [A8] OpenAI 검색/학습 크롤러 구분: https://developers.openai.com/api/docs/bots
+- [A9] robots.txt의 루트 위치와 적용 범위: https://developers.google.com/crawling/docs/robots-txt/create-robots-txt
+- [A10] 네이버 검색 최적화와 호스트 단위 소유 확인: https://searchadvisor.naver.com/guide/seo-basic-intro
 
 ## 출처
 

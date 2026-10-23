@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:pages": "PAGES_EXPORT=1 next build",
+    "test:pages": "playwright test --config playwright.pages.config.ts",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

@@ -1,4 +1,5 @@
-import GameClient from "@/components/game/GameClient";
+import GamePage from "@/components/game/GamePage";
+// Legacy entry point. Root metadata intentionally canonicalizes this duplicate to /.
 export default function PlayPage() {
-  return <GameClient />;
+  return <GamePage />;
 }
